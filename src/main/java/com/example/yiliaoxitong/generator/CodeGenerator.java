@@ -24,8 +24,8 @@ public final class CodeGenerator {
 
     private static final String USERNAME = "root";
 
-    /** 本机 MySQL root 密码，运行时按实际情况修改 */
-    private static final String PASSWORD = "123456";
+    /** 本机 MySQL root 密码：运行时通过 -Dmysql.password=xxx 传入，避免把口令写死在代码里 */
+    private static final String PASSWORD = System.getProperty("mysql.password", "");
 
     private static final String BASE_PACKAGE = "com.example.yiliaoxitong";
 
@@ -59,7 +59,6 @@ public final class CodeGenerator {
                         .addTablePrefix("t_")
                         .entityBuilder()
                         .enableFileOverride()
-                        .logicDeleteColumnName("deleted")
                         .mapperBuilder()
                         .enableBaseResultMap()
                         .enableBaseColumnList()
