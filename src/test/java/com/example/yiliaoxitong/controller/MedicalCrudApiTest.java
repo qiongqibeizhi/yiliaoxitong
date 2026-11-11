@@ -45,6 +45,14 @@ class MedicalCrudApiTest {
     }
 
     @Test
+    void jsonResponseShouldDeclareUtf8Charset() throws Exception {
+        mockMvc.perform(get("/api/departments").param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", org.hamcrest.Matchers.containsString("charset=UTF-8")));
+    }
+
+    @Test
     void departmentPageQueryShouldReturnSeedData() throws Exception {
         mockMvc.perform(get("/api/departments").param("pageNum", "1").param("pageSize", "10"))
                 .andExpect(status().isOk())
