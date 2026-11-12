@@ -1,0 +1,149 @@
+### 医疗系统实验二接口测试（IDEA HTTP Client，点击左侧绿色箭头即可执行）
+@host = http://localhost:8080
+
+### 1. 科室分页查询（第1页，每页5条）
+GET {{host}}/api/departments?pageNum=1&pageSize=5
+
+### 2. 科室按名称模糊查询
+GET {{host}}/api/departments?name=内&status=1
+
+### 3. 科室详情
+GET {{host}}/api/departments/1
+
+### 4. 新增科室
+POST {{host}}/api/departments
+Content-Type: application/json
+
+{
+  "deptCode": "KF",
+  "deptName": "康复科",
+  "location": "门诊楼6层",
+  "phone": "0731-88880006",
+  "description": "术后康复与理疗",
+  "status": 1
+}
+
+### 5. 修改科室（把 id 换成刚新增的科室 id）
+PUT {{host}}/api/departments/6
+Content-Type: application/json
+
+{
+  "deptCode": "KF",
+  "deptName": "康复医学科",
+  "location": "门诊楼6层东区",
+  "phone": "0731-88880006",
+  "status": 1
+}
+
+### 6. 删除科室（有医生引用时会返回 400 提示不能删除）
+DELETE {{host}}/api/departments/6
+
+### 7. 医生分页查询（按科室+关键词）
+GET {{host}}/api/doctors?pageNum=1&pageSize=10&departmentId=1&keyword=张
+
+### 8. 新增医生（departmentId 必须是已存在的科室）
+POST {{host}}/api/doctors
+Content-Type: application/json
+
+{
+  "doctorNo": "D0006",
+  "name": "吴磊",
+  "gender": "男",
+  "title": "主治医师",
+  "departmentId": 2,
+  "phone": "13800001006",
+  "specialty": "骨折复位与关节镜",
+  "status": 1
+}
+
+### 9. 患者分页查询（姓名模糊）
+GET {{host}}/api/patients?pageNum=1&pageSize=10&keyword=刘
+
+### 10. 新增患者（身份证号需校验位正确，出生日期会自动回填）
+POST {{host}}/api/patients
+Content-Type: application/json
+
+{
+  "patientNo": "P0004",
+  "name": "郑爽",
+  "gender": "女",
+  "idCard": "430102199608082347",
+  "phone": "13900002004",
+  "address": "长沙市雨花区"
+}
+
+### 11. 异常用例：手机号格式错误（预期 400）
+POST {{host}}/api/patients
+Content-Type: application/json
+
+{
+  "patientNo": "P0005",
+  "name": "测试患者",
+  "gender": "男",
+  "idCard": "430102199003031234",
+  "phone": "12345678901"
+}
+
+### 12. 异常用例：科室编码重复（预期 400）
+POST {{host}}/api/departments
+Content-Type: application/json
+
+{
+  "deptCode": "NK",
+  "deptName": "内科二诊室",
+  "status": 1
+}
+
+### ===== 实验三：排班 / 挂号 / 处方（事务） =====
+
+### 13. 排班分页查询（按医生筛选）
+GET {{host}}/api/schedules?doctorId=1&pageNum=1&pageSize=5
+
+### 14. 新增排班（同一医生同一天同一时段只能排一次，重复会返回 400）
+POST {{host}}/api/schedules
+Content-Type: application/json
+
+{
+  "doctorId": 1,
+  "scheduleDate": "2026-11-20",
+  "timeSlot": "上午",
+  "totalSlots": 8,
+  "regFee": 20.00,
+  "status": 1
+}
+
+### 15. 挂号（号源 booked_slots +1；重复挂号返回 400）
+POST {{host}}/api/registrations
+Content-Type: application/json
+
+{
+  "patientId": 4,
+  "scheduleId": 1
+}
+
+### 16. 挂号记录分页查询
+GET {{host}}/api/registrations?patientId=4&pageNum=1&pageSize=5
+
+### 17. 取消挂号（状态置 2 并释放号源）
+PUT {{host}}/api/registrations/25/cancel
+
+### 18. 开处方（处方、明细、库存扣减同一事务；数量超库存返回 400 且整单回滚）
+POST {{host}}/api/prescriptions
+Content-Type: application/json
+
+{
+  "registrationId": 25,
+  "diagnosis": "急性咽炎",
+  "items": [
+    { "drugId": 1, "quantity": 2, "dosage": "一次2粒，一日3次" }
+  ]
+}
+
+### 19. 处方分页查询
+GET {{host}}/api/prescriptions?patientId=4&pageNum=1&pageSize=5
+
+### 20. 处方明细
+GET {{host}}/api/prescriptions/11/items
+
+### 21. 药品库存查询
+GET {{host}}/api/drugs?keyword=阿莫西林&pageNum=1&pageSize=5
