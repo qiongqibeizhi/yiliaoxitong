@@ -18,6 +18,8 @@ USE yiliaoxitong;
 DROP TABLE IF EXISTS prescription_item;
 DROP TABLE IF EXISTS prescription;
 DROP TABLE IF EXISTS registration;
+DROP TABLE IF EXISTS doctor_schedule;
+DROP TABLE IF EXISTS drug;
 DROP TABLE IF EXISTS doctor;
 DROP TABLE IF EXISTS patient;
 DROP TABLE IF EXISTS department;
@@ -67,6 +69,52 @@ CREATE TABLE doctor (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '医生信息表';
 
 -- ------------------------------------------------------------
+-- 2.1 医生排班表 doctor_schedule（实验三新增）
+--     一个医生在一个日期的一个时段只排一次班，号源总数与已挂数量在此维护
+--     booked_slots 由条件更新原子递增，避免"先查后改"造成并发超卖
+-- ------------------------------------------------------------
+CREATE TABLE doctor_schedule (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '排班主键',
+    doctor_id     BIGINT       NOT NULL                COMMENT '医生外键',
+    schedule_date DATE         NOT NULL                COMMENT '排班日期',
+    time_slot     VARCHAR(20)  NOT NULL                COMMENT '时段：上午/下午/夜间',
+    total_slots   INT          NOT NULL DEFAULT 0      COMMENT '号源总数',
+    booked_slots  INT          NOT NULL DEFAULT 0      COMMENT '已挂号数量',
+    reg_fee       DECIMAL(8,2) NOT NULL DEFAULT 0.00   COMMENT '挂号费',
+    status        TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1可预约 0停诊',
+    create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_schedule_doctor_slot (doctor_id, schedule_date, time_slot),
+    KEY idx_schedule_date (schedule_date),
+    CONSTRAINT fk_schedule_doctor FOREIGN KEY (doctor_id)
+        REFERENCES doctor (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT ck_schedule_slots CHECK (total_slots >= 0 AND booked_slots >= 0),
+    CONSTRAINT ck_schedule_status CHECK (status IN (0, 1))
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '医生排班与号源表';
+
+-- ------------------------------------------------------------
+-- 2.2 药品表 drug（实验三新增）
+--     库存是处方事务中需要原子扣减的共享资源
+-- ------------------------------------------------------------
+CREATE TABLE drug (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '药品主键',
+    drug_code   VARCHAR(20)  NOT NULL                COMMENT '药品编码，唯一',
+    drug_name   VARCHAR(100) NOT NULL                COMMENT '药品名称',
+    spec        VARCHAR(50)  NULL                    COMMENT '规格',
+    unit        VARCHAR(10)  NULL                    COMMENT '单位',
+    price       DECIMAL(8,2) NOT NULL DEFAULT 0.00   COMMENT '单价',
+    stock       INT          NOT NULL DEFAULT 0      COMMENT '库存数量',
+    status      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1在售 0停用',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_drug_code (drug_code),
+    KEY idx_drug_name (drug_name),
+    CONSTRAINT ck_drug_stock CHECK (stock >= 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '药品库存表';
+
+-- ------------------------------------------------------------
 -- 3. 患者表 patient
 --    身份证号唯一标识患者，手机号必填用于就诊通知
 -- ------------------------------------------------------------
@@ -93,6 +141,8 @@ CREATE TABLE patient (
 -- 4. 挂号记录表 registration
 --    挂号是患者、医生、科室之间的业务联系表，只保存外键与业务字段
 --    (doctor_id, visit_date, time_slot) 唯一，保证同一医生同一时段号源不重复
+--    （实验三调整：号源改由 doctor_schedule 表维护，挂号通过 schedule_id 关联并原子扣减；
+--      同一患者同一医生同一天的重复挂号由 Service 层校验拦截）
 -- ------------------------------------------------------------
 CREATE TABLE registration (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '挂号主键',
@@ -100,6 +150,7 @@ CREATE TABLE registration (
     patient_id    BIGINT       NOT NULL                COMMENT '患者外键',
     doctor_id     BIGINT       NOT NULL                COMMENT '医生外键',
     department_id BIGINT       NOT NULL                COMMENT '科室外键',
+    schedule_id   BIGINT       NULL                    COMMENT '排班外键，指向本次就诊的号源',
     visit_date    DATE         NOT NULL                COMMENT '就诊日期',
     time_slot     VARCHAR(20)  NOT NULL                COMMENT '就诊时段：上午/下午/具体时间',
     reg_fee       DECIMAL(8,2) NOT NULL DEFAULT 0.00   COMMENT '挂号费',
@@ -108,7 +159,8 @@ CREATE TABLE registration (
     update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_reg_no (reg_no),
-    UNIQUE KEY uk_doctor_slot (doctor_id, visit_date, time_slot),
+    KEY idx_reg_schedule (schedule_id),
+    KEY idx_reg_dup (patient_id, doctor_id, visit_date),
     KEY idx_reg_patient (patient_id),
     KEY idx_reg_dept (department_id),
     KEY idx_reg_date (visit_date),
@@ -118,6 +170,8 @@ CREATE TABLE registration (
         REFERENCES doctor (id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_reg_dept FOREIGN KEY (department_id)
         REFERENCES department (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_reg_schedule FOREIGN KEY (schedule_id)
+        REFERENCES doctor_schedule (id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT ck_reg_status CHECK (status IN (0, 1, 2))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '挂号记录表';
 
@@ -156,6 +210,7 @@ CREATE TABLE prescription (
 CREATE TABLE prescription_item (
     id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '明细主键',
     prescription_id BIGINT       NOT NULL                COMMENT '处方外键',
+    drug_id         BIGINT       NULL                    COMMENT '药品外键，用于库存扣减',
     drug_name       VARCHAR(100) NOT NULL                COMMENT '药品名称',
     spec            VARCHAR(50)  NULL                    COMMENT '规格',
     quantity        INT          NOT NULL DEFAULT 1      COMMENT '数量',
@@ -167,6 +222,8 @@ CREATE TABLE prescription_item (
     KEY idx_item_presc (prescription_id),
     CONSTRAINT fk_item_presc FOREIGN KEY (prescription_id)
         REFERENCES prescription (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_item_drug FOREIGN KEY (drug_id)
+        REFERENCES drug (id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT ck_item_quantity CHECK (quantity > 0)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '处方明细表';
 
@@ -225,31 +282,77 @@ INSERT INTO patient (patient_no, name, gender, id_card, phone, birth_date, addre
 ('P0014', '夏雨欣', '女', '430102201505280124', '13900002014', '2015-05-28', '长沙市雨花区劳动东路128号'),
 ('P0015', '范志远', '男', '430102197001250117', '13900002015', '1970-01-25', '长沙市天心区湘府东路206号');
 
-INSERT INTO registration (reg_no, patient_id, doctor_id, department_id, visit_date, time_slot, reg_fee, status) VALUES
-('R202611110001', 1, 1, 1, '2026-11-11', '上午', 20.00, 1),
-('R202611110002', 2, 4, 3, '2026-11-11', '下午', 15.00, 1),
-('R202611120003', 3, 5, 4, '2026-11-12', '上午', 10.00, 0),
-('R202611110004', 4, 7, 5, '2026-11-11', '上午', 18.00, 1),
-('R202611110005', 5, 3, 2, '2026-11-11', '下午', 15.00, 1),
-('R202611120006', 6, 2, 1, '2026-11-12', '上午', 20.00, 0),
-('R202611120007', 7, 12, 9, '2026-11-12', '下午', 15.00, 1),
-('R202611110008', 8, 11, 3, '2026-11-11', '上午', 20.00, 1),
-('R202611130009', 9, 10, 8, '2026-11-13', '上午', 12.00, 0),
-('R202611120010', 10, 9, 7, '2026-11-12', '下午', 12.00, 1),
-('R202611120011', 11, 1, 1, '2026-11-12', '上午', 20.00, 1),
-('R202611130012', 12, 8, 6, '2026-11-13', '下午', 15.00, 0),
-('R202611130013', 13, 2, 1, '2026-11-13', '上午', 20.00, 1),
-('R202611120014', 14, 14, 4, '2026-11-12', '上午', 10.00, 1),
-('R202611140015', 15, 15, 5, '2026-11-14', '上午', 18.00, 0),
-('R202611130016', 1, 7, 5, '2026-11-13', '下午', 18.00, 1),
-('R202611140017', 3, 2, 1, '2026-11-14', '下午', 20.00, 2),
-('R202611140018', 5, 12, 9, '2026-11-14', '上午', 15.00, 0),
-('R202611130019', 13, 16, 9, '2026-11-13', '上午', 15.00, 1),
-('R202611140020', 8, 11, 3, '2026-11-14', '上午', 20.00, 0),
-('R202611140021', 11, 20, 10, '2026-11-14', '夜间', 25.00, 1),
-('R202611140022', 6, 17, 8, '2026-11-14', '下午', 12.00, 2),
-('R202611130023', 2, 18, 6, '2026-11-13', '上午', 15.00, 0),
-('R202611140024', 9, 19, 7, '2026-11-14', '下午', 12.00, 0);
+INSERT INTO drug (drug_code, drug_name, spec, unit, price, stock, status) VALUES
+('DRG001', '苯磺酸氨氯地平片', '5mg*28片', '盒', 28.50, 200, 1),
+('DRG002', '阿托伐他汀钙片', '20mg*14片', '盒', 42.00, 200, 1),
+('DRG003', '琥珀酸亚铁片', '0.1g*24片', '盒', 18.50, 200, 1),
+('DRG004', '维生素C片', '0.1g*100片', '瓶', 6.00, 60, 1),
+('DRG005', '玻璃酸钠滴眼液', '0.1%*5ml', '支', 36.00, 200, 1),
+('DRG006', '熊去氧胆酸胶囊', '250mg*24粒', '盒', 68.00, 200, 1),
+('DRG007', '消炎利胆片', '0.26g*60片', '瓶', 15.80, 200, 1),
+('DRG008', '桂枝茯苓胶囊', '0.31g*100粒', '盒', 45.00, 60, 1),
+('DRG009', '阿莫西林胶囊', '0.5g*24粒', '盒', 12.60, 200, 1),
+('DRG010', '复方氯己定含漱液', '200ml', '瓶', 22.00, 200, 1),
+('DRG011', '二甲双胍缓释片', '0.5g*30片', '盒', 26.00, 200, 1),
+('DRG012', '瑞舒伐他汀钙片', '10mg*7片', '盒', 39.00, 60, 1),
+('DRG013', '小儿氨溴索口服液', '100ml', '瓶', 23.50, 200, 1),
+('DRG014', '阿奇霉素干混悬剂', '0.1g*6袋', '盒', 31.00, 200, 1),
+('DRG015', '糠酸莫米松鼻喷雾剂', '50μg*60喷', '支', 58.00, 200, 1),
+('DRG016', '氯雷他定片', '10mg*12片', '盒', 19.80, 60, 1),
+('DRG017', '塞来昔布胶囊', '0.2g*12粒', '盒', 48.00, 200, 1),
+('DRG018', '甲钴胺片', '0.5mg*24片', '盒', 32.00, 200, 1);
+
+INSERT INTO doctor_schedule (doctor_id, schedule_date, time_slot, total_slots, booked_slots, reg_fee, status) VALUES
+(1, '2026-11-11', '上午', 10, 1, 20.00, 1),
+(4, '2026-11-11', '下午', 10, 1, 15.00, 1),
+(5, '2026-11-12', '上午', 10, 1, 10.00, 1),
+(7, '2026-11-11', '上午', 10, 1, 18.00, 1),
+(3, '2026-11-11', '下午', 10, 1, 15.00, 1),
+(2, '2026-11-12', '上午', 10, 1, 20.00, 1),
+(12, '2026-11-12', '下午', 10, 1, 15.00, 1),
+(11, '2026-11-11', '上午', 10, 1, 20.00, 1),
+(10, '2026-11-13', '上午', 10, 1, 12.00, 1),
+(9, '2026-11-12', '下午', 10, 1, 12.00, 1),
+(1, '2026-11-12', '上午', 10, 1, 20.00, 1),
+(8, '2026-11-13', '下午', 10, 1, 15.00, 1),
+(2, '2026-11-13', '上午', 10, 1, 20.00, 1),
+(14, '2026-11-12', '上午', 10, 1, 10.00, 1),
+(15, '2026-11-14', '上午', 10, 1, 18.00, 1),
+(7, '2026-11-13', '下午', 10, 1, 18.00, 1),
+(2, '2026-11-14', '下午', 10, 0, 20.00, 1),
+(12, '2026-11-14', '上午', 10, 1, 15.00, 1),
+(16, '2026-11-13', '上午', 10, 1, 15.00, 1),
+(11, '2026-11-14', '上午', 10, 1, 20.00, 1),
+(20, '2026-11-14', '夜间', 10, 1, 25.00, 1),
+(17, '2026-11-14', '下午', 10, 0, 12.00, 1),
+(18, '2026-11-13', '上午', 10, 1, 15.00, 1),
+(19, '2026-11-14', '下午', 10, 1, 12.00, 1);
+
+INSERT INTO registration (reg_no, patient_id, doctor_id, department_id, schedule_id, visit_date, time_slot, reg_fee, status) VALUES
+('R202611110001', 1, 1, 1, 1, '2026-11-11', '上午', 20.00, 1),
+('R202611110002', 2, 4, 3, 2, '2026-11-11', '下午', 15.00, 1),
+('R202611120003', 3, 5, 4, 3, '2026-11-12', '上午', 10.00, 0),
+('R202611110004', 4, 7, 5, 4, '2026-11-11', '上午', 18.00, 1),
+('R202611110005', 5, 3, 2, 5, '2026-11-11', '下午', 15.00, 1),
+('R202611120006', 6, 2, 1, 6, '2026-11-12', '上午', 20.00, 0),
+('R202611120007', 7, 12, 9, 7, '2026-11-12', '下午', 15.00, 1),
+('R202611110008', 8, 11, 3, 8, '2026-11-11', '上午', 20.00, 1),
+('R202611130009', 9, 10, 8, 9, '2026-11-13', '上午', 12.00, 0),
+('R202611120010', 10, 9, 7, 10, '2026-11-12', '下午', 12.00, 1),
+('R202611120011', 11, 1, 1, 11, '2026-11-12', '上午', 20.00, 1),
+('R202611130012', 12, 8, 6, 12, '2026-11-13', '下午', 15.00, 0),
+('R202611130013', 13, 2, 1, 13, '2026-11-13', '上午', 20.00, 1),
+('R202611120014', 14, 14, 4, 14, '2026-11-12', '上午', 10.00, 1),
+('R202611140015', 15, 15, 5, 15, '2026-11-14', '上午', 18.00, 0),
+('R202611130016', 1, 7, 5, 16, '2026-11-13', '下午', 18.00, 1),
+('R202611140017', 3, 2, 1, 17, '2026-11-14', '下午', 20.00, 2),
+('R202611140018', 5, 12, 9, 18, '2026-11-14', '上午', 15.00, 0),
+('R202611130019', 13, 16, 9, 19, '2026-11-13', '上午', 15.00, 1),
+('R202611140020', 8, 11, 3, 20, '2026-11-14', '上午', 20.00, 0),
+('R202611140021', 11, 20, 10, 21, '2026-11-14', '夜间', 25.00, 1),
+('R202611140022', 6, 17, 8, 22, '2026-11-14', '下午', 12.00, 2),
+('R202611130023', 2, 18, 6, 23, '2026-11-13', '上午', 15.00, 0),
+('R202611140024', 9, 19, 7, 24, '2026-11-14', '下午', 12.00, 0);
 
 INSERT INTO prescription (presc_no, registration_id, patient_id, doctor_id, diagnosis, presc_time, status) VALUES
 ('PR202611101', 1, 1, 1, '原发性高血压2级', '2026-11-11 10:05:00', 1),
@@ -263,22 +366,22 @@ INSERT INTO prescription (presc_no, registration_id, patient_id, doctor_id, diag
 ('PR202611109', 16, 1, 7, '过敏性鼻炎', '2026-11-11 10:29:00', 0),
 ('PR202611110', 19, 13, 16, '腰椎间盘突出症', '2026-11-11 10:32:00', 0);
 
-INSERT INTO prescription_item (prescription_id, drug_name, spec, quantity, unit, dosage, price) VALUES
-(1, '苯磺酸氨氯地平片', '5mg*28片', 2, '盒', '一次1片，一日1次，晨服', 28.50),
-(1, '阿托伐他汀钙片', '20mg*14片', 3, '盒', '一次1片，一日1次，睡前服', 42.00),
-(2, '琥珀酸亚铁片', '0.1g*24片', 2, '盒', '一次1片，一日2次，饭后服', 18.50),
-(2, '维生素C片', '0.1g*100片', 1, '瓶', '一次1片，一日3次', 6.00),
-(3, '玻璃酸钠滴眼液', '0.1%*5ml', 2, '支', '一次1滴，一日4次', 36.00),
-(4, '熊去氧胆酸胶囊', '250mg*24粒', 2, '盒', '一次1粒，一日3次', 68.00),
-(4, '消炎利胆片', '0.26g*60片', 2, '瓶', '一次3片，一日3次', 15.80),
-(5, '桂枝茯苓胶囊', '0.31g*100粒', 2, '盒', '一次3粒，一日3次', 45.00),
-(6, '阿莫西林胶囊', '0.5g*24粒', 1, '盒', '一次2粒，一日3次', 12.60),
-(6, '复方氯己定含漱液', '200ml', 1, '瓶', '一次10ml，含漱2分钟，一日3次', 22.00),
-(7, '二甲双胍缓释片', '0.5g*30片', 3, '盒', '一次1片，一日2次，餐后服', 26.00),
-(7, '瑞舒伐他汀钙片', '10mg*7片', 4, '盒', '一次1片，一日1次，睡前服', 39.00),
-(8, '小儿氨溴索口服液', '100ml', 1, '瓶', '一次5ml，一日3次', 23.50),
-(8, '阿奇霉素干混悬剂', '0.1g*6袋', 2, '盒', '一次1袋，一日1次，连服3天', 31.00),
-(9, '糠酸莫米松鼻喷雾剂', '50μg*60喷', 1, '支', '每侧鼻腔1喷，一日1次', 58.00),
-(9, '氯雷他定片', '10mg*12片', 1, '盒', '一次1片，一日1次', 19.80),
-(10, '塞来昔布胶囊', '0.2g*12粒', 2, '盒', '一次1粒，一日1次', 48.00),
-(10, '甲钴胺片', '0.5mg*24片', 2, '盒', '一次1片，一日3次', 32.00);
+INSERT INTO prescription_item (prescription_id, drug_id, drug_name, spec, quantity, unit, dosage, price) VALUES
+(1, 1, '苯磺酸氨氯地平片', '5mg*28片', 2, '盒', '一次1片，一日1次，晨服', 28.50),
+(1, 2, '阿托伐他汀钙片', '20mg*14片', 3, '盒', '一次1片，一日1次，睡前服', 42.00),
+(2, 3, '琥珀酸亚铁片', '0.1g*24片', 2, '盒', '一次1片，一日2次，饭后服', 18.50),
+(2, 4, '维生素C片', '0.1g*100片', 1, '瓶', '一次1片，一日3次', 6.00),
+(3, 5, '玻璃酸钠滴眼液', '0.1%*5ml', 2, '支', '一次1滴，一日4次', 36.00),
+(4, 6, '熊去氧胆酸胶囊', '250mg*24粒', 2, '盒', '一次1粒，一日3次', 68.00),
+(4, 7, '消炎利胆片', '0.26g*60片', 2, '瓶', '一次3片，一日3次', 15.80),
+(5, 8, '桂枝茯苓胶囊', '0.31g*100粒', 2, '盒', '一次3粒，一日3次', 45.00),
+(6, 9, '阿莫西林胶囊', '0.5g*24粒', 1, '盒', '一次2粒，一日3次', 12.60),
+(6, 10, '复方氯己定含漱液', '200ml', 1, '瓶', '一次10ml，含漱2分钟，一日3次', 22.00),
+(7, 11, '二甲双胍缓释片', '0.5g*30片', 3, '盒', '一次1片，一日2次，餐后服', 26.00),
+(7, 12, '瑞舒伐他汀钙片', '10mg*7片', 4, '盒', '一次1片，一日1次，睡前服', 39.00),
+(8, 13, '小儿氨溴索口服液', '100ml', 1, '瓶', '一次5ml，一日3次', 23.50),
+(8, 14, '阿奇霉素干混悬剂', '0.1g*6袋', 2, '盒', '一次1袋，一日1次，连服3天', 31.00),
+(9, 15, '糠酸莫米松鼻喷雾剂', '50μg*60喷', 1, '支', '每侧鼻腔1喷，一日1次', 58.00),
+(9, 16, '氯雷他定片', '10mg*12片', 1, '盒', '一次1片，一日1次', 19.80),
+(10, 17, '塞来昔布胶囊', '0.2g*12粒', 2, '盒', '一次1粒，一日1次', 48.00),
+(10, 18, '甲钴胺片', '0.5mg*24片', 2, '盒', '一次1片，一日3次', 32.00);

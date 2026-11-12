@@ -31,6 +31,9 @@ public class Registration {
     @TableField("department_id")
     private Long departmentId;
 
+    @TableField("schedule_id")
+    private Long scheduleId;
+
     @TableField("visit_date")
     private LocalDate visitDate;
 
@@ -86,6 +89,14 @@ public class Registration {
 
     public void setDepartmentId(Long departmentId) {
         this.departmentId = departmentId;
+    }
+
+    public Long getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(Long scheduleId) {
+        this.scheduleId = scheduleId;
     }
 
     public LocalDate getVisitDate() {

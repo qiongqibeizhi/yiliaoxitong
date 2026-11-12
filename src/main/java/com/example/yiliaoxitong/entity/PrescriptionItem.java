@@ -22,6 +22,9 @@ public class PrescriptionItem {
     @TableField("prescription_id")
     private Long prescriptionId;
 
+    @TableField("drug_id")
+    private Long drugId;
+
     @TableField("drug_name")
     private String drugName;
 
@@ -52,6 +55,14 @@ public class PrescriptionItem {
 
     public void setPrescriptionId(Long prescriptionId) {
         this.prescriptionId = prescriptionId;
+    }
+
+    public Long getDrugId() {
+        return drugId;
+    }
+
+    public void setDrugId(Long drugId) {
+        this.drugId = drugId;
     }
 
     public String getDrugName() {
