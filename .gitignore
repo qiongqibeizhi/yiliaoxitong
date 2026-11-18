@@ -35,3 +35,7 @@ build/
 ### VS Code ###
 .vscode/
 .DS_Store
+
+# 实验报告只留本地/桌面，不纳入版本库
+docs/*.docx
+*.docx
