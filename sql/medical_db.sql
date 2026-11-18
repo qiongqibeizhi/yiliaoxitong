@@ -15,6 +15,7 @@ USE yiliaoxitong;
 -- 1. 科室表 department
 --    科室为独立实体，医生、挂号均通过外键引用，避免冗余存储科室名称
 -- ------------------------------------------------------------
+DROP TABLE IF EXISTS sys_user;
 DROP TABLE IF EXISTS prescription_item;
 DROP TABLE IF EXISTS prescription;
 DROP TABLE IF EXISTS registration;
@@ -385,3 +386,33 @@ INSERT INTO prescription_item (prescription_id, drug_id, drug_name, spec, quanti
 (9, 16, '氯雷他定片', '10mg*12片', 1, '盒', '一次1片，一日1次', 19.80),
 (10, 17, '塞来昔布胶囊', '0.2g*12粒', 2, '盒', '一次1粒，一日1次', 48.00),
 (10, 18, '甲钴胺片', '0.5mg*24片', 2, '盒', '一次1片，一日3次', 32.00);
+
+
+-- ------------------------------------------------------------
+-- 9. 系统账号表 sys_user（实验四）
+--    一个账号对应一个角色，患者/医生账号通过 patient_id、doctor_id 关联业务主体，
+--    口令只保存 SHA-256 摘要，不落明文
+-- ------------------------------------------------------------
+CREATE TABLE sys_user (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '账号主键',
+    username    VARCHAR(40)  NOT NULL                COMMENT '登录名，唯一',
+    password    VARCHAR(64)  NOT NULL                COMMENT '口令 SHA-256 摘要',
+    role        VARCHAR(20)  NOT NULL                COMMENT '角色：ADMIN/DOCTOR/PATIENT',
+    real_name   VARCHAR(30)  NULL                    COMMENT '真实姓名',
+    patient_id  BIGINT       NULL                    COMMENT '患者账号关联的患者编号',
+    doctor_id   BIGINT       NULL                    COMMENT '医生账号关联的医生编号',
+    status      INT          NOT NULL DEFAULT 1      COMMENT '1 启用，0 停用',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sys_user_username (username),
+    CONSTRAINT ck_sys_user_role CHECK (role IN ('ADMIN', 'DOCTOR', 'PATIENT')),
+    CONSTRAINT fk_user_patient FOREIGN KEY (patient_id) REFERENCES patient (id),
+    CONSTRAINT fk_user_doctor FOREIGN KEY (doctor_id) REFERENCES doctor (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统账号与角色表';
+
+-- 演示账号，口令均为 123456（SHA-256 摘要）
+INSERT INTO sys_user (username, password, role, real_name, patient_id, doctor_id, status) VALUES
+('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'ADMIN', '系统管理员', NULL, NULL, 1),
+('doctor1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'DOCTOR', '张明', NULL, 1, 1),
+('patient1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'PATIENT', '刘洋', 1, NULL, 1);

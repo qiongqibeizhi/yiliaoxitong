@@ -2,6 +2,8 @@ package com.example.yiliaoxitong.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.yiliaoxitong.common.Result;
+import com.example.yiliaoxitong.security.RequireRole;
+import com.example.yiliaoxitong.security.Role;
 import com.example.yiliaoxitong.dto.ScheduleQuery;
 import com.example.yiliaoxitong.entity.DoctorSchedule;
 import com.example.yiliaoxitong.service.DoctorScheduleService;
@@ -39,16 +41,19 @@ public class DoctorScheduleController {
     }
 
     @PostMapping
+    @RequireRole(Role.ADMIN)
     public Result<DoctorSchedule> create(@Valid @RequestBody DoctorSchedule schedule) {
         return Result.ok(scheduleService.create(schedule));
     }
 
     @PutMapping("/{id}")
+    @RequireRole(Role.ADMIN)
     public Result<DoctorSchedule> modify(@PathVariable Long id, @Valid @RequestBody DoctorSchedule schedule) {
         return Result.ok(scheduleService.update(id, schedule));
     }
 
     @DeleteMapping("/{id}")
+    @RequireRole(Role.ADMIN)
     public Result<Void> remove(@PathVariable Long id) {
         scheduleService.delete(id);
         return Result.ok();

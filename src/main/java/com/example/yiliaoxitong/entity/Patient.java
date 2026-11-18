@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.example.yiliaoxitong.common.json.IdCardMaskSerializer;
+import com.example.yiliaoxitong.common.json.PhoneMaskSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -37,10 +40,13 @@ public class Patient {
     @NotBlank(message = "身份证号不能为空")
     @Pattern(regexp = "^\\d{17}[0-9Xx]$", message = "身份证号格式不正确")
     @TableField("id_card")
+    @JsonSerialize(using = IdCardMaskSerializer.class)
     private String idCard;
 
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    @TableField("phone")
+    @JsonSerialize(using = PhoneMaskSerializer.class)
     private String phone;
 
     @TableField("birth_date")

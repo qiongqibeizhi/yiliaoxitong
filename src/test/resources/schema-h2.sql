@@ -1,4 +1,5 @@
 -- 测试用 H2 建表脚本（MODE=MySQL），结构与 sql/medical_db.sql 保持一致
+DROP TABLE IF EXISTS sys_user;
 DROP TABLE IF EXISTS prescription_item;
 DROP TABLE IF EXISTS prescription;
 DROP TABLE IF EXISTS registration;
@@ -126,4 +127,19 @@ CREATE TABLE prescription_item (
     create_time     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_item_presc FOREIGN KEY (prescription_id) REFERENCES prescription (id) ON DELETE CASCADE,
     CONSTRAINT fk_item_drug FOREIGN KEY (drug_id) REFERENCES drug (id)
+);
+
+CREATE TABLE sys_user (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username    VARCHAR(40)  NOT NULL UNIQUE,
+    password    VARCHAR(64)  NOT NULL,
+    role        VARCHAR(20)  NOT NULL,
+    real_name   VARCHAR(30),
+    patient_id  BIGINT,
+    doctor_id   BIGINT,
+    status      INT          NOT NULL DEFAULT 1,
+    create_time TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_patient FOREIGN KEY (patient_id) REFERENCES patient (id),
+    CONSTRAINT fk_user_doctor FOREIGN KEY (doctor_id) REFERENCES doctor (id)
 );

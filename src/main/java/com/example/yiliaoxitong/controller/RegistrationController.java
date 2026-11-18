@@ -2,6 +2,8 @@ package com.example.yiliaoxitong.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.yiliaoxitong.common.Result;
+import com.example.yiliaoxitong.security.RequireRole;
+import com.example.yiliaoxitong.security.Role;
 import com.example.yiliaoxitong.dto.RegistrationQuery;
 import com.example.yiliaoxitong.dto.RegistrationRequest;
 import com.example.yiliaoxitong.entity.Registration;
@@ -29,21 +31,25 @@ public class RegistrationController {
     }
 
     @GetMapping
+    @RequireRole({Role.ADMIN, Role.DOCTOR})
     public Result<IPage<Registration>> page(RegistrationQuery query) {
         return Result.ok(registrationService.page(query));
     }
 
     @GetMapping("/{id}")
+    @RequireRole({Role.ADMIN, Role.DOCTOR})
     public Result<Registration> detail(@PathVariable Long id) {
         return Result.ok(registrationService.detail(id));
     }
 
     @PostMapping
+    @RequireRole({Role.PATIENT, Role.ADMIN, Role.DOCTOR})
     public Result<Registration> register(@Valid @RequestBody RegistrationRequest request) {
         return Result.ok(registrationService.register(request));
     }
 
     @PutMapping("/{id}/cancel")
+    @RequireRole({Role.PATIENT, Role.ADMIN})
     public Result<Void> cancel(@PathVariable Long id) {
         registrationService.cancel(id);
         return Result.ok();

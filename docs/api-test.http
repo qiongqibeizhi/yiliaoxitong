@@ -1,5 +1,9 @@
 ### 医疗系统实验二接口测试（IDEA HTTP Client，点击左侧绿色箭头即可执行）
 @host = http://localhost:8080
+# 实验四令牌：先执行 31、32、33 三条登录（它们会把令牌写入下面的变量）
+@adminToken = 
+@doctorToken = 
+@patientToken = 
 
 ### 1. 科室分页查询（第1页，每页5条）
 GET {{host}}/api/departments?pageNum=1&pageSize=5
@@ -147,3 +151,64 @@ GET {{host}}/api/prescriptions/11/items
 
 ### 21. 药品库存查询
 GET {{host}}/api/drugs?keyword=阿莫西林&pageNum=1&pageSize=5
+
+### ============ 实验四：安全认证 ============
+
+### 28. 管理员登录（后续请求用返回的 token）
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "admin", "password": "123456"}
+> {%
+  client.global.set("adminToken", response.body.data.token);
+%}
+
+### 29. 医生登录
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "doctor1", "password": "123456"}
+> {%
+  client.global.set("doctorToken", response.body.data.token);
+%}
+
+### 30. 患者登录
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "patient1", "password": "123456"}
+> {%
+  client.global.set("patientToken", response.body.data.token);
+%}
+
+### 31. 口令错误，返回 401
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "admin", "password": "000000"}
+
+### 32. 未登录访问患者档案，返回 401
+GET http://localhost:8080/api/patients
+
+### 33. 患者令牌访问患者档案，返回 403（RBAC 越权）
+GET http://localhost:8080/api/patients
+Authorization: Bearer {{patientToken}}
+
+### 34. 医生令牌查看患者档案，身份证与手机号脱敏
+GET http://localhost:8080/api/patients/1
+Authorization: Bearer {{doctorToken}}
+
+### 35. 管理员令牌查看患者档案，返回完整敏感字段
+GET http://localhost:8080/api/patients/1
+Authorization: Bearer {{adminToken}}
+
+### 36. 查询当前登录信息
+GET http://localhost:8080/api/auth/me
+Authorization: Bearer {{adminToken}}
+
+### 37. 注销后旧令牌失效，返回 401
+POST http://localhost:8080/api/auth/logout
+Authorization: Bearer {{patientToken}}
+
+### 38. 未登录查询科室目录（公开只读），返回 200
+GET http://localhost:8080/api/departments

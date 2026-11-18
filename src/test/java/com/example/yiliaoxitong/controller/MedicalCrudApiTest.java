@@ -1,10 +1,12 @@
 package com.example.yiliaoxitong.controller;
 
+import com.example.yiliaoxitong.util.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,14 @@ class MedicalCrudApiTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    /** 管理员令牌：实验四起科室、患者的写接口要求 ADMIN 角色 */
+    private String adminAuth() {
+        return "Bearer " + jwtUtils.createToken("admin", "ADMIN", null, null);
+    }
 
     private static String withCheckCode(String first17) {
         int[] weights = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
@@ -70,7 +80,7 @@ class MedicalCrudApiTest {
         body.put("phone", "0731-88889999");
         body.put("status", 1);
 
-        mockMvc.perform(post("/api/departments")
+        mockMvc.perform(post("/api/departments").header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
@@ -81,13 +91,13 @@ class MedicalCrudApiTest {
                 .andExpect(jsonPath("$.data.records[0].deptCode").value("TEST01"));
 
         body.put("deptName", "测试科室（已改名）");
-        mockMvc.perform(put("/api/departments/{id}", 3L)
+        mockMvc.perform(put("/api/departments/{id}", 3L).header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
-        mockMvc.perform(delete("/api/departments/{id}", 3L))
+        mockMvc.perform(delete("/api/departments/{id}", 3L).header(HttpHeaders.AUTHORIZATION, adminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -102,7 +112,7 @@ class MedicalCrudApiTest {
         body.put("deptName", "重复编码科室");
         body.put("status", 1);
 
-        mockMvc.perform(post("/api/departments")
+        mockMvc.perform(post("/api/departments").header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest())
@@ -111,7 +121,7 @@ class MedicalCrudApiTest {
 
     @Test
     void deleteDepartmentWithDoctorShouldBeRejected() throws Exception {
-        mockMvc.perform(delete("/api/departments/{id}", 1L))
+        mockMvc.perform(delete("/api/departments/{id}", 1L).header(HttpHeaders.AUTHORIZATION, adminAuth()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("不能删除")));
     }
@@ -125,7 +135,7 @@ class MedicalCrudApiTest {
         body.put("idCard", withCheckCode("43010219900303123"));
         body.put("phone", "12345678901");
 
-        mockMvc.perform(post("/api/patients")
+        mockMvc.perform(post("/api/patients").header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest())
@@ -141,7 +151,7 @@ class MedicalCrudApiTest {
         body.put("idCard", "430102199003031230");
         body.put("phone", "13900009999");
 
-        mockMvc.perform(post("/api/patients")
+        mockMvc.perform(post("/api/patients").header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest())
@@ -157,13 +167,13 @@ class MedicalCrudApiTest {
         body.put("idCard", withCheckCode("43010219900303123"));
         body.put("phone", "13900008888");
 
-        mockMvc.perform(post("/api/patients")
+        mockMvc.perform(post("/api/patients").header(HttpHeaders.AUTHORIZATION, adminAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
-        mockMvc.perform(get("/api/patients").param("keyword", "P9003"))
+        mockMvc.perform(get("/api/patients").header(HttpHeaders.AUTHORIZATION, adminAuth()).param("keyword", "P9003"))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].birthDate").value("1990-03-03"));
     }

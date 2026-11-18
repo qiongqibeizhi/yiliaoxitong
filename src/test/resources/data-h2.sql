@@ -15,3 +15,9 @@ INSERT INTO drug (drug_code, drug_name, spec, unit, price, stock, status) VALUES
 ('DRG001', '阿莫西林胶囊', '0.5g*24粒', '盒', 12.60, 100, 1),
 ('DRG002', '布洛芬缓释胶囊', '0.3g*20粒', '盒', 18.80, 5, 1),
 ('DRG003', '维生素C片', '0.1g*100片', '瓶', 6.00, 200, 1);
+
+-- 实验四：三角色演示账号，口令均为 123456
+INSERT INTO sys_user (username, password, role, real_name, patient_id, doctor_id, status) VALUES
+('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'ADMIN', '系统管理员', NULL, NULL, 1),
+('doctor1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'DOCTOR', '张明', NULL, 1, 1),
+('patient1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'PATIENT', '刘洋', 1, NULL, 1);
