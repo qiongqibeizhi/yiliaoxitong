@@ -57,7 +57,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { clearSession, getUser, ROLE_TEXT } from './utils/auth'
+import { clearSession, getUser, getToken, ROLE_TEXT } from './utils/auth'
 import { logout } from './api/auth'
 import { homePathByRole } from './router'
 import { getBalance } from './api/wallet'
@@ -80,7 +80,7 @@ const homePath = computed(() => homePathByRole(role.value))
 const walletText = ref('0.00')
 
 async function refreshWallet() {
-  if (isPatient.value && !isLogin.value) {
+  if (isPatient.value && !isLogin.value && getToken()) {
     try {
       walletText.value = Number(await getBalance()).toFixed(2)
     } catch (e) {

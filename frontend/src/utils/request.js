@@ -31,7 +31,9 @@ request.interceptors.response.use(
     ElMessage.error(message)
     if (body && body.code === 401) {
       clearSession()
-      window.location.href = '/login'
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(new Error(message))
   },
@@ -42,7 +44,9 @@ request.interceptors.response.use(
     if (status === 401) {
       message = (body && body.message) || '未登录或登录已过期，请重新登录'
       clearSession()
-      window.location.href = '/login'
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
     } else if (status === 403) {
       message = (body && body.message) || '当前角色无权访问该资源'
     } else if (status === 404) {

@@ -12,4 +12,5 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 }
 app.use(ElementPlus, { locale: zhCn })
 app.use(router)
-app.mount('#app')
+// 等待首次路由解析完成再挂载，避免挂载瞬间路由未就绪触发错误请求
+router.isReady().then(() => app.mount('#app'))
