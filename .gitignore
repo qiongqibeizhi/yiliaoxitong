@@ -39,3 +39,8 @@ build/
 # 实验报告只留本地/桌面，不纳入版本库
 docs/*.docx
 *.docx
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

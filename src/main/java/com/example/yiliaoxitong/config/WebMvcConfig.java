@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -33,6 +34,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 jacksonConverter.setSupportedMediaTypes(List.of(jsonUtf8));
             }
         }
+    }
+
+    /**
+     * 前后端分离后页面在 5173，接口在 8080，属于跨域请求：
+     * 需要允许前端源访问 /api/**，并放行 Authorization 头（令牌）与 JSON 请求体。
+     */
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOriginPatterns("http://localhost:5173", "http://127.0.0.1:5173")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization")
+                .maxAge(3600);
     }
 
     @Override

@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 实验四安全认证集成测试：JWT 签发、全局拦截、RBAC 越权拦截、注销销毁与字段脱敏。
+ * 安全认证集成测试：JWT 签发、全局拦截、RBAC 越权拦截、注销销毁与字段脱敏。
  */
 @SpringBootTest
 @AutoConfigureMockMvc

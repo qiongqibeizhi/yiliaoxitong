@@ -48,6 +48,10 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
+        // 跨域预检请求不携带令牌，必须直接放行，否则浏览器拿不到 CORS 响应头
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
