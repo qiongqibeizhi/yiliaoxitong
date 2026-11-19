@@ -53,6 +53,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { login } from '../api/auth'
 import { saveSession } from '../utils/auth'
+import { homePathByRole } from '../router'
 
 const router = useRouter()
 const route = useRoute()
@@ -78,7 +79,7 @@ async function submit() {
       const data = await login({ username: form.username, password: form.password })
       saveSession(data)
       ElMessage.success(`欢迎回来，${data.realName || data.username}`)
-      router.push(route.query.redirect || '/departments')
+      router.push(route.query.redirect || homePathByRole(data.role))
     } catch (e) {
       // 错误提示已由 Axios 拦截器统一弹出
     } finally {

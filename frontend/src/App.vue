@@ -4,15 +4,33 @@
   </div>
   <el-container v-else class="layout">
     <el-header class="topbar">
-      <div class="brand" @click="$router.push('/departments')">
+      <div class="brand" @click="$router.push(homePath)">
         <el-icon class="brand-icon"><FirstAidKit /></el-icon>
         <div>
           <div class="brand-name">仁和医疗</div>
           <div class="brand-sub">在线挂号平台</div>
         </div>
       </div>
-      <el-menu mode="horizontal" :ellipsis="false" class="nav" router default-active="/departments">
-        <el-menu-item index="/departments">科室导航</el-menu-item>
+      <el-menu mode="horizontal" :ellipsis="false" class="nav" router :default-active="activeNav">
+        <template v-if="isPatient">
+          <el-menu-item index="/departments">科室导航</el-menu-item>
+          <el-menu-item index="/drugs">药品库</el-menu-item>
+        </template>
+        <template v-else-if="isDoctor">
+          <el-menu-item index="/registrations">挂号记录</el-menu-item>
+          <el-menu-item index="/prescriptions">处方管理</el-menu-item>
+          <el-menu-item index="/patients">患者档案</el-menu-item>
+          <el-menu-item index="/drugs">药品库</el-menu-item>
+        </template>
+        <template v-else>
+          <el-menu-item index="/registrations">挂号记录</el-menu-item>
+          <el-menu-item index="/prescriptions">处方管理</el-menu-item>
+          <el-menu-item index="/patients">患者档案</el-menu-item>
+          <el-menu-item index="/manage/schedules">排班管理</el-menu-item>
+          <el-menu-item index="/manage/doctors">医生管理</el-menu-item>
+          <el-menu-item index="/manage/departments">科室管理</el-menu-item>
+          <el-menu-item index="/drugs">药品库</el-menu-item>
+        </template>
       </el-menu>
       <div class="user-area">
         <el-tag v-if="user" type="success" effect="plain" round>{{ roleText }}</el-tag>
@@ -35,13 +53,29 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearSession, getUser, ROLE_TEXT } from './utils/auth'
 import { logout } from './api/auth'
+import { homePathByRole } from './router'
 
 const route = useRoute()
 const router = useRouter()
 
 const isLogin = computed(() => route.path === '/login')
-const user = computed(() => getUser())
+// getUser 读的是 localStorage（非响应式），这里显式依赖路由，
+// 登录/登出引起导航变化时才會重新读取会话，保证菜单与角色标签即时刷新
+const user = computed(() => {
+  void route.fullPath
+  return getUser()
+})
 const roleText = computed(() => (user.value ? ROLE_TEXT[user.value.role] || user.value.role : ''))
+const role = computed(() => user.value?.role || 'PATIENT')
+const isPatient = computed(() => role.value === 'PATIENT')
+const isDoctor = computed(() => role.value === 'DOCTOR')
+const homePath = computed(() => homePathByRole(role.value))
+const activeNav = computed(() => {
+  if (route.path.startsWith('/manage/doctors')) return '/manage/doctors'
+  if (route.path.startsWith('/manage/departments')) return '/manage/departments'
+  if (route.path.startsWith('/manage/schedules')) return '/manage/schedules'
+  return route.path
+})
 
 async function handleLogout() {
   try {
@@ -83,17 +117,18 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
   background: #ffffff;
   border-bottom: 1px solid #e6ebf2;
   box-shadow: 0 2px 8px rgba(15, 58, 102, 0.06);
-  padding: 0 28px;
+  padding: 0 24px;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .brand-icon {
   font-size: 28px;
@@ -111,18 +146,20 @@ body {
 .nav {
   flex: 1;
   border-bottom: none;
+  min-width: 0;
 }
 .user-area {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 .username {
   font-size: 14px;
   color: #40536b;
 }
 .main {
-  width: 1080px;
+  width: 1160px;
   max-width: 100%;
   margin: 0 auto;
   padding: 24px 20px 40px;
