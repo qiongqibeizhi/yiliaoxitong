@@ -19,4 +19,10 @@ public interface PrescriptionService {
     Prescription detail(Long id);
 
     List<PrescriptionItem> items(Long prescriptionId);
+
+    /** 患者凭余额支付处方药费 */
+    Prescription pay(Long patientId, Long prescriptionId);
+
+    /** 处方应付总额 = 明细单价 × 数量之和 */
+    java.math.BigDecimal totalAmount(Long prescriptionId);
 }

@@ -17,6 +17,7 @@
           <el-menu-item index="/my-registrations">我的挂号</el-menu-item>
           <el-menu-item index="/prescriptions">我的处方</el-menu-item>
           <el-menu-item index="/store">购药商城</el-menu-item>
+          <el-menu-item index="/wallet">我的钱包</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
         <template v-else-if="isDoctor">
@@ -38,6 +39,7 @@
       </el-menu>
       <div class="user-area">
         <el-tag v-if="user" type="success" effect="plain" round>{{ roleText }}</el-tag>
+        <span v-if="isPatient" class="wallet-chip">余额 ¥ {{ walletText }}</span>
         <span v-if="user" class="username">{{ user.realName || user.username }}</span>
         <el-button v-if="user" link type="primary" @click="handleLogout">退出登录</el-button>
       </div>
@@ -52,12 +54,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearSession, getUser, ROLE_TEXT } from './utils/auth'
 import { logout } from './api/auth'
 import { homePathByRole } from './router'
+import { getBalance } from './api/wallet'
 
 const route = useRoute()
 const router = useRouter()
@@ -74,6 +77,24 @@ const role = computed(() => user.value?.role || 'PATIENT')
 const isPatient = computed(() => role.value === 'PATIENT')
 const isDoctor = computed(() => role.value === 'DOCTOR')
 const homePath = computed(() => homePathByRole(role.value))
+const walletText = ref('0.00')
+
+async function refreshWallet() {
+  if (isPatient.value && !isLogin.value) {
+    try {
+      walletText.value = Number(await getBalance()).toFixed(2)
+    } catch (e) {
+      walletText.value = '0.00'
+    }
+  }
+}
+
+watch(() => route.fullPath, () => {
+  // 余额在支付/充值后随路由变化刷新
+  refreshWallet()
+})
+
+refreshWallet()
 const activeNav = computed(() => {
   if (route.path.startsWith('/manage/doctors')) return '/manage/doctors'
   if (route.path.startsWith('/manage/departments')) return '/manage/departments'
@@ -161,6 +182,11 @@ body {
 .username {
   font-size: 14px;
   color: #40536b;
+}
+.wallet-chip {
+  font-size: 13px;
+  color: #e6653a;
+  font-weight: 600;
 }
 .main {
   width: 1160px;

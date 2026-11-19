@@ -98,6 +98,12 @@ const routes = [
     meta: { title: '购药商城', roles: ['PATIENT'] }
   },
   {
+    path: '/wallet',
+    name: 'wallet',
+    component: () => import('../views/Wallet.vue'),
+    meta: { title: '我的钱包', roles: ['PATIENT'] }
+  },
+  {
     path: '/orders',
     name: 'purchaseOrders',
     component: () => import('../views/PurchaseOrders.vue'),

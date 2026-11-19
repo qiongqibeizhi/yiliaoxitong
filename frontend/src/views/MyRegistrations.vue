@@ -21,7 +21,11 @@
       </el-table-column>
       <el-table-column label="操作" width="110" align="center">
         <template #default="{ row }">
-          <el-button v-if="row.status === 0" type="danger" link @click="cancel(row)">退号</el-button>
+          <el-button
+            v-if="row.status === 0 && isFuture(row)"
+            type="danger" link @click="cancel(row)"
+          >退号</el-button>
+          <span v-else-if="row.status === 0" class="muted">当天号不可退</span>
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
@@ -76,6 +80,10 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function isFuture(row) {
+  return row.visitDate && row.visitDate > new Date().toISOString().slice(0, 10)
 }
 
 async function cancel(row) {

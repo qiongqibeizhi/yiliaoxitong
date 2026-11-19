@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
  */
 public class RegistrationRequest {
 
-    @NotNull(message = "患者 ID 不能为空")
+    /** 患者登录挂号时可不传，服务端强制使用登录态中的本人患者 ID */
     private Long patientId;
 
     @NotNull(message = "排班 ID 不能为空")

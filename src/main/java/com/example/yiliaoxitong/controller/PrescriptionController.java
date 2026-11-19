@@ -14,7 +14,9 @@ import com.example.yiliaoxitong.service.PrescriptionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -75,6 +77,21 @@ public class PrescriptionController {
     @RequireRole({Role.DOCTOR, Role.ADMIN})
     public Result<Prescription> create(@Valid @RequestBody PrescriptionRequest request) {
         return Result.ok(prescriptionService.create(request));
+    }
+
+    /** 处方应付金额（明细单价 × 数量之和） */
+    @GetMapping("/{id}/amount")
+    @RequireRole({Role.DOCTOR, Role.ADMIN, Role.PATIENT})
+    public Result<java.math.BigDecimal> amount(@PathVariable Long id) {
+        checkOwnership(prescriptionService.detail(id));
+        return Result.ok(prescriptionService.totalAmount(id));
+    }
+
+    /** 患者凭余额支付处方药费：医生开单后才能付款 */
+    @PutMapping("/{id}/pay")
+    @RequireRole(Role.PATIENT)
+    public Result<Prescription> pay(@PathVariable Long id) {
+        return Result.ok(prescriptionService.pay(AuthContext.get().patientId(), id));
     }
 
     /** 非 admin 访问他人处方时直接拒绝 */

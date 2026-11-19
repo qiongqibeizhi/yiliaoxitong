@@ -15,3 +15,13 @@ export function getPrescriptionItems(id) {
 export function createPrescription(data) {
   return request.post('/api/prescriptions', data)
 }
+
+/** 处方应付金额（明细单价 × 数量之和） */
+export function getPrescriptionAmount(id) {
+  return request.get(`/api/prescriptions/${id}/amount`)
+}
+
+/** 患者凭余额支付处方药费 */
+export function payPrescription(id) {
+  return request.put(`/api/prescriptions/${id}/pay`)
+}

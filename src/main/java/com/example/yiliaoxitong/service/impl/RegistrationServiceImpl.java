@@ -50,7 +50,13 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Registration register(RegistrationRequest request) {
-        Patient patient = patientMapper.selectById(request.getPatientId());
+        // 患者登录挂号：强制使用登录态中的本人患者 ID，防止代挂他人
+        var actor = com.example.yiliaoxitong.security.AuthContext.get();
+        Long patientId = request.getPatientId();
+        if (actor != null && "PATIENT".equals(actor.role())) {
+            patientId = actor.patientId();
+        }
+        Patient patient = patientMapper.selectById(patientId);
         if (patient == null) {
             throw new BusinessException("患者不存在，请先完成患者建档");
         }
@@ -103,6 +109,12 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
     @Transactional(rollbackFor = Exception.class)
     public void cancel(Long id) {
         Registration registration = detail(id);
+        // 患者只能取消非当天的预约；管理员不受限
+        var actor = com.example.yiliaoxitong.security.AuthContext.get();
+        if (actor != null && "PATIENT".equals(actor.role())
+                && java.time.LocalDate.now().equals(registration.getVisitDate())) {
+            throw new BusinessException("当天就诊的号不能自行取消，请当天前来就诊");
+        }
         if (registration.getStatus() == 2) {
             throw new BusinessException("该挂号已取消，无需重复操作");
         }

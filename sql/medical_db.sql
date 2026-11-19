@@ -442,3 +442,15 @@ CREATE TABLE purchase_order (
     CONSTRAINT fk_purchase_order_patient FOREIGN KEY (patient_id) REFERENCES patient (id),
     CONSTRAINT fk_purchase_order_drug FOREIGN KEY (drug_id) REFERENCES drug (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '患者单独购药订单表';
+
+-- ------------------------------------------------------------
+-- 11. 患者钱包表 patient_wallet（余额支付体系）
+--    充值/支付均以条件更新保证余额不为负；注册患者自动开户
+-- ------------------------------------------------------------
+CREATE TABLE patient_wallet (
+    patient_id  BIGINT        NOT NULL COMMENT '患者编号',
+    balance     DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '账户余额（元）',
+    update_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (patient_id),
+    CONSTRAINT fk_wallet_patient FOREIGN KEY (patient_id) REFERENCES patient (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '患者钱包账户表';

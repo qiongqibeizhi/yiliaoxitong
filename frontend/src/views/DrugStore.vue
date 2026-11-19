@@ -74,6 +74,10 @@
       <el-alert type="info" :closable="false" class="pay-tip"
         title="沙箱环境不产生真实扣款，统一付款密码为 123456" />
       <el-descriptions :column="1" border size="small" class="buy-desc">
+        <el-descriptions-item label="钱包余额">
+          <span class="balance-chip">¥ {{ Number(balance).toFixed(2) }}</span>
+          <el-button v-if="Number(balance) < Number(payOrder.amount)" link type="danger" @click="$router.push('/wallet')">余额不足，去充值</el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="订单编号">{{ payOrder.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="应付金额">
           <span class="amount">¥ {{ Number(payOrder.amount).toFixed(2) }}</span>
@@ -131,6 +135,9 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageDrugs } from '../api/drug'
 import { purchase, pagePurchases, payPurchase } from '../api/purchase'
+import { getBalance } from '../api/wallet'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const loading = ref(false)
 const rows = ref([])
@@ -146,6 +153,7 @@ const buyVisible = ref(false)
 const buyDrug = ref({})
 const quantity = ref(1)
 const buying = ref(false)
+const balance = ref(0)
 const payVisible = ref(false)
 const payOrder = ref({})
 const payPassword = ref('')
@@ -207,11 +215,12 @@ async function confirmBuy() {
   }
 }
 
-function openPay(row) {
+async function openPay(row) {
   payOrder.value = row
   payPassword.value = ''
   payChannel.value = 'WECHAT'
   bankCardNo.value = ''
+  balance.value = await getBalance()
   payVisible.value = true
 }
 
@@ -230,6 +239,7 @@ async function confirmPay() {
     ElMessage.success(`支付成功（${channelText(payChannel.value)}），实付 ¥ ${Number(order.amount).toFixed(2)}`)
     payVisible.value = false
     loadOrders()
+    balance.value = await getBalance()
   } finally {
     paying.value = false
   }

@@ -23,9 +23,17 @@
       </el-table-column>
       <el-table-column prop="diagnosis" label="诊断" min-width="160" show-overflow-tooltip />
       <el-table-column prop="prescTime" label="开方时间" width="170" align="center" />
-      <el-table-column label="操作" width="110" align="center">
+      <el-table-column label="状态" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 0 ? 'warning' : 'success'" effect="plain">
+            {{ row.status === 0 ? '待支付' : '已支付' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="170" align="center">
         <template #default="{ row }">
           <el-button type="primary" link @click="showDetail(row)">明细</el-button>
+          <el-button v-if="isPatient && row.status === 0" type="success" link @click="pay(row)">支付药费</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -111,6 +119,10 @@ import { ElMessage } from 'element-plus'
 import { pagePrescriptions, getPrescription, getPrescriptionItems, createPrescription } from '../api/prescription'
 import { pageDoctors } from '../api/doctor'
 import { pageDrugs } from '../api/drug'
+import { payPrescription, getPrescriptionAmount } from '../api/prescription'
+import { getBalance } from '../api/wallet'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 import { getUser } from '../utils/auth'
 
 const user = getUser()
@@ -154,6 +166,24 @@ async function load() {
 
 function search() { query.pageNum = 1; load() }
 function reset() { query.registrationId = ''; search() }
+
+async function pay(row) {
+  const amount = await getPrescriptionAmount(row.id)
+  const balance = await getBalance()
+  if (Number(balance) < Number(amount)) {
+    ElMessage.warning(`药费 ¥ ${Number(amount).toFixed(2)}，余额不足（当前 ¥ ${Number(balance).toFixed(2)}），请先充值`)
+    router.push('/wallet')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确认支付处方 ${row.prescNo} 药费 ¥ ${Number(amount).toFixed(2)} 吗？`, '余额支付', { type: 'info' })
+  } catch (e) {
+    return
+  }
+  await payPrescription(row.id)
+  ElMessage.success('药费支付成功')
+  load()
+}
 
 async function showDetail(row) {
   detail.value = await getPrescription(row.id)

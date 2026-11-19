@@ -45,9 +45,9 @@
         <el-table-column prop="regFee" label="挂号费（元）" width="130" align="center" />
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="plain">
-              {{ row.status === 1 ? '可预约' : '已停诊' }}
-            </el-tag>
+            <el-tag v-if="row.status !== 1" type="info" effect="plain">已停诊</el-tag>
+            <el-tag v-else-if="remain(row) <= 0" type="danger" effect="plain">已约满</el-tag>
+            <el-tag v-else type="success" effect="plain">可预约</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="140" align="center">
@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDoctor } from '../api/doctor'
 import { pageSchedules } from '../api/schedule'
@@ -114,7 +114,13 @@ function book(row) {
   })
 }
 
-onMounted(load)
+let timer = null
+onMounted(() => {
+  load()
+  // 每 15 秒轮询号源：有人退号或就诊完成释放号源后，满号时段立即恢复可选
+  timer = setInterval(load, 15000)
+})
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>

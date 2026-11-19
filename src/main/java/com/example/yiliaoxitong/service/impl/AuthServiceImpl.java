@@ -7,6 +7,7 @@ import com.example.yiliaoxitong.dto.LoginResponse;
 import com.example.yiliaoxitong.entity.Patient;
 import com.example.yiliaoxitong.entity.SysUser;
 import com.example.yiliaoxitong.mapper.PatientMapper;
+import com.example.yiliaoxitong.mapper.PatientWalletMapper;
 import com.example.yiliaoxitong.exception.BusinessException;
 import com.example.yiliaoxitong.mapper.SysUserMapper;
 import com.example.yiliaoxitong.security.TokenPayload;
@@ -32,11 +33,14 @@ public class AuthServiceImpl implements AuthService {
 
     private final SysUserMapper userMapper;
     private final PatientMapper patientMapper;
+    private final PatientWalletMapper walletMapper;
     private final JwtUtils jwtUtils;
 
-    public AuthServiceImpl(SysUserMapper userMapper, PatientMapper patientMapper, JwtUtils jwtUtils) {
+    public AuthServiceImpl(SysUserMapper userMapper, PatientMapper patientMapper,
+                           PatientWalletMapper walletMapper, JwtUtils jwtUtils) {
         this.userMapper = userMapper;
         this.patientMapper = patientMapper;
+        this.walletMapper = walletMapper;
         this.jwtUtils = jwtUtils;
     }
 
@@ -82,6 +86,11 @@ public class AuthServiceImpl implements AuthService {
         if (userMapper.insert(user) != 1) {
             throw new BusinessException("开通账号失败，请稍后重试");
         }
+        // 注册即开户，初始余额 0
+        var wallet = new com.example.yiliaoxitong.entity.PatientWallet();
+        wallet.setPatientId(patient.getId());
+        wallet.setBalance(java.math.BigDecimal.ZERO);
+        walletMapper.insert(wallet);
         log.info("患者注册成功：username={}, patientId={}", user.getUsername(), patient.getId());
 
         String token = jwtUtils.createToken(user.getUsername(), user.getRole(),

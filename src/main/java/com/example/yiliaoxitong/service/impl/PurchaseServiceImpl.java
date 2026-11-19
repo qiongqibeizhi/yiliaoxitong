@@ -12,6 +12,7 @@ import com.example.yiliaoxitong.exception.StockNotEnoughException;
 import com.example.yiliaoxitong.mapper.DrugMapper;
 import com.example.yiliaoxitong.mapper.PurchaseOrderMapper;
 import com.example.yiliaoxitong.service.PurchaseService;
+import com.example.yiliaoxitong.service.WalletService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,9 +39,11 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseOrderMapper, Purcha
     private static final String SANDBOX_PAY_PASSWORD = "123456";
 
     private final DrugMapper drugMapper;
+    private final WalletService walletService;
 
-    public PurchaseServiceImpl(DrugMapper drugMapper) {
+    public PurchaseServiceImpl(DrugMapper drugMapper, WalletService walletService) {
         this.drugMapper = drugMapper;
+        this.walletService = walletService;
     }
 
     @Override
@@ -109,6 +112,8 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseOrderMapper, Purcha
         if ("BANK".equals(payChannel) && (bankCardNo == null || !bankCardNo.matches("\\d{13,19}"))) {
             throw new BusinessException("请输入正确的银行卡号（13-19 位数字）");
         }
+        // 余额支付：余额不足时整体回滚（库存不会误扣）
+        walletService.deduct(order.getPatientId(), order.getAmount());
         order.setStatus(1);
         updateById(order);
         log.info("虚拟支付成功：orderNo={}, amount={}, channel={}",

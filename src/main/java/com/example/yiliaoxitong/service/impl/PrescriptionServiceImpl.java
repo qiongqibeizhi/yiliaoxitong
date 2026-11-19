@@ -18,6 +18,7 @@ import com.example.yiliaoxitong.mapper.PrescriptionItemMapper;
 import com.example.yiliaoxitong.mapper.PrescriptionMapper;
 import com.example.yiliaoxitong.mapper.RegistrationMapper;
 import com.example.yiliaoxitong.service.PrescriptionService;
+import com.example.yiliaoxitong.service.WalletService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,12 +43,15 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
     private final RegistrationMapper registrationMapper;
     private final PrescriptionItemMapper itemMapper;
     private final DrugMapper drugMapper;
+    private final WalletService walletService;
 
     public PrescriptionServiceImpl(RegistrationMapper registrationMapper,
-                                   PrescriptionItemMapper itemMapper, DrugMapper drugMapper) {
+                                   PrescriptionItemMapper itemMapper, DrugMapper drugMapper,
+                                   WalletService walletService) {
         this.registrationMapper = registrationMapper;
         this.itemMapper = itemMapper;
         this.drugMapper = drugMapper;
+        this.walletService = walletService;
     }
 
     @Override
@@ -79,7 +83,8 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
         prescription.setDoctorId(registration.getDoctorId());
         prescription.setDiagnosis(request.getDiagnosis());
         prescription.setPrescTime(LocalDateTime.now());
-        prescription.setStatus(1);
+        // 开单后订单进入待支付状态，由患者凭余额支付
+        prescription.setStatus(0);
         save(prescription);
 
         for (PrescriptionItemRequest itemRequest : request.getItems()) {
@@ -120,6 +125,33 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
                 .eq(doctorId != null, Prescription::getDoctorId, doctorId)
                 .orderByDesc(Prescription::getPrescTime);
         return page(new Page<>(pageNum, pageSize), wrapper);
+    }
+
+    @Override
+    public java.math.BigDecimal totalAmount(Long prescriptionId) {
+        return itemMapper.selectList(new LambdaQueryWrapper<PrescriptionItem>()
+                        .eq(PrescriptionItem::getPrescriptionId, prescriptionId))
+                .stream()
+                .map(item -> item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Prescription pay(Long patientId, Long prescriptionId) {
+        Prescription prescription = detail(prescriptionId);
+        if (!patientId.equals(prescription.getPatientId())) {
+            throw new BusinessException("只能支付本人的处方");
+        }
+        if (prescription.getStatus() != null && prescription.getStatus() != 0) {
+            throw new BusinessException("该处方已支付，请勿重复支付");
+        }
+        // 余额扣款：不足时整体回滚
+        walletService.deduct(patientId, totalAmount(prescriptionId));
+        prescription.setStatus(1);
+        updateById(prescription);
+        log.info("处方支付成功：prescNo={}, patientId={}", prescription.getPrescNo(), patientId);
+        return prescription;
     }
 
     @Override
