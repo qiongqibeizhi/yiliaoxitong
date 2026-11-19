@@ -66,8 +66,13 @@ public class AuthServiceImpl implements AuthService {
         patient.setIdCard(request.getIdCard());
         patient.setPhone(request.getPhone());
         patient.setAddress(request.getAddress());
-        java.time.LocalDate birthday = java.time.LocalDate.parse(
-                request.getIdCard().substring(6, 14), java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        java.time.LocalDate birthday;
+        try {
+            birthday = java.time.LocalDate.parse(
+                    request.getIdCard().substring(6, 14), java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new BusinessException("身份证号无效：出生日期段不合法，请检查号码是否正确");
+        }
         if (java.time.LocalDate.now().isBefore(birthday)) {
             throw new BusinessException("身份证号出生日期无效，请检查号码是否正确");
         }
