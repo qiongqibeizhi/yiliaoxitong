@@ -115,7 +115,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { pagePrescriptions, getPrescription, getPrescriptionItems, createPrescription } from '../api/prescription'
 import { pageDoctors } from '../api/doctor'
 import { pageDrugs } from '../api/drug'
