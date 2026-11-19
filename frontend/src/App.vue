@@ -15,6 +15,8 @@
         <template v-if="isPatient">
           <el-menu-item index="/departments">科室导航</el-menu-item>
           <el-menu-item index="/my-registrations">我的挂号</el-menu-item>
+          <el-menu-item index="/prescriptions">我的处方</el-menu-item>
+          <el-menu-item index="/store">购药商城</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
         <template v-else-if="isDoctor">
@@ -30,6 +32,7 @@
           <el-menu-item index="/manage/schedules">排班管理</el-menu-item>
           <el-menu-item index="/manage/doctors">医生管理</el-menu-item>
           <el-menu-item index="/manage/departments">科室管理</el-menu-item>
+          <el-menu-item index="/orders">购药订单</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
       </el-menu>

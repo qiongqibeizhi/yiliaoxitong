@@ -2,6 +2,7 @@ package com.example.yiliaoxitong.controller;
 
 import com.example.yiliaoxitong.common.Result;
 import com.example.yiliaoxitong.dto.LoginRequest;
+import com.example.yiliaoxitong.dto.RegisterRequest;
 import com.example.yiliaoxitong.dto.LoginResponse;
 import com.example.yiliaoxitong.security.TokenPayload;
 import com.example.yiliaoxitong.service.AuthService;
@@ -30,6 +31,12 @@ public class AuthController {
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.ok(authService.login(request));
+    }
+
+    /** 患者自助注册：建档 + 开通账号，注册成功直接返回登录令牌 */
+    @PostMapping("/register")
+    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return Result.ok(authService.register(request));
     }
 
     @PostMapping("/logout")

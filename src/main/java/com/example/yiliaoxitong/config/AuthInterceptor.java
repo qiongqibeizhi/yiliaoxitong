@@ -70,7 +70,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         if (payload == null) {
-            if (isPublicRead(request)) {
+            if (isPublicRead(request) || isPublicWrite(request)) {
                 return true;
             }
             return reject(response, 401, "未登录或登录已过期，请重新登录");
@@ -96,6 +96,13 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         String uri = request.getRequestURI();
         return PUBLIC_READ_PREFIXES.stream().anyMatch(uri::startsWith);
+    }
+
+    /** 公开写路径：登录、患者自助注册 */
+    private boolean isPublicWrite(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return ("/api/auth/login".equals(uri) || "/api/auth/register".equals(uri))
+                && ("POST".equalsIgnoreCase(request.getMethod()));
     }
 
     @Override

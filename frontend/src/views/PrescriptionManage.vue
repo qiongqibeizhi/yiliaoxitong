@@ -10,7 +10,7 @@
       <el-form-item>
         <el-button type="primary" icon="Search" @click="search">查询</el-button>
         <el-button icon="Refresh" @click="reset">重置</el-button>
-        <el-button type="success" icon="Plus" @click="openCreate">开具新处方</el-button>
+        <el-button v-if="!isPatient" type="success" icon="Plus" @click="openCreate">开具新处方</el-button>
       </el-form-item>
     </el-form>
 
@@ -114,6 +114,7 @@ import { pageDrugs } from '../api/drug'
 import { getUser } from '../utils/auth'
 
 const user = getUser()
+const isPatient = user?.role === 'PATIENT'
 const loading = ref(false)
 const rows = ref([])
 const total = ref(0)

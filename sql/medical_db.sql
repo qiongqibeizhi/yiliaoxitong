@@ -417,3 +417,28 @@ INSERT INTO sys_user (username, password, role, real_name, patient_id, doctor_id
 ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'ADMIN', '系统管理员', NULL, NULL, 1),
 ('doctor1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'DOCTOR', '张明', NULL, 1, 1),
 ('patient1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'PATIENT', '刘洋', 1, NULL, 1);
+
+-- ------------------------------------------------------------
+-- 10. 购药订单表 purchase_order（患者单独购药）
+--    患者不挂号也可直接购买在售药品；下单即扣减库存（条件更新防超卖），
+--    快照药品名称/规格/单价，保证药品调价后历史订单可追溯
+-- ------------------------------------------------------------
+CREATE TABLE purchase_order (
+    id          BIGINT        NOT NULL AUTO_INCREMENT COMMENT '订单主键',
+    order_no    VARCHAR(40)   NOT NULL                COMMENT '订单编号',
+    patient_id  BIGINT        NOT NULL                COMMENT '购药患者编号',
+    drug_id     BIGINT        NOT NULL                COMMENT '药品编号',
+    drug_name   VARCHAR(60)   NOT NULL                COMMENT '药品名称快照',
+    spec        VARCHAR(60)   NULL                    COMMENT '规格快照',
+    quantity    INT           NOT NULL                COMMENT '购买数量',
+    price       DECIMAL(10,2) NOT NULL                COMMENT '成交单价快照',
+    amount      DECIMAL(10,2) NOT NULL                COMMENT '订单总额 = 单价 × 数量',
+    status      INT           NOT NULL DEFAULT 0      COMMENT '0 待支付，1 已完成（已支付），2 已退款',
+    create_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+    update_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_purchase_order_no (order_no),
+    KEY idx_purchase_order_patient (patient_id),
+    CONSTRAINT fk_purchase_order_patient FOREIGN KEY (patient_id) REFERENCES patient (id),
+    CONSTRAINT fk_purchase_order_drug FOREIGN KEY (drug_id) REFERENCES drug (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '患者单独购药订单表';

@@ -12,6 +12,7 @@ import com.example.yiliaoxitong.entity.PrescriptionItem;
 import com.example.yiliaoxitong.entity.Registration;
 import com.example.yiliaoxitong.exception.BusinessException;
 import com.example.yiliaoxitong.exception.StockNotEnoughException;
+import com.example.yiliaoxitong.security.AuthContext;
 import com.example.yiliaoxitong.mapper.DrugMapper;
 import com.example.yiliaoxitong.mapper.PrescriptionItemMapper;
 import com.example.yiliaoxitong.mapper.PrescriptionMapper;
@@ -58,6 +59,12 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
         }
         if (registration.getStatus() == 2) {
             throw new BusinessException("该挂号已取消，不能开具处方");
+        }
+        // 医生只能给自己接诊的挂号开方；管理员不受限
+        var actor = AuthContext.get();
+        if (actor != null && "DOCTOR".equals(actor.role()) && actor.doctorId() != null
+                && !actor.doctorId().equals(registration.getDoctorId())) {
+            throw new BusinessException("只能为本人接诊的挂号开具处方");
         }
         long exists = count(new LambdaQueryWrapper<Prescription>()
                 .eq(Prescription::getRegistrationId, registration.getId()));
@@ -106,10 +113,11 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
     }
 
     @Override
-    public IPage<Prescription> page(Long registrationId, Long patientId, long pageNum, long pageSize) {
+    public IPage<Prescription> page(Long registrationId, Long patientId, Long doctorId, long pageNum, long pageSize) {
         LambdaQueryWrapper<Prescription> wrapper = new LambdaQueryWrapper<Prescription>()
                 .eq(registrationId != null, Prescription::getRegistrationId, registrationId)
                 .eq(patientId != null, Prescription::getPatientId, patientId)
+                .eq(doctorId != null, Prescription::getDoctorId, doctorId)
                 .orderByDesc(Prescription::getPrescTime);
         return page(new Page<>(pageNum, pageSize), wrapper);
     }

@@ -9,6 +9,12 @@ const routes = [
     component: () => import('../views/Login.vue'),
     meta: { public: true, title: '登录' }
   },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/Register.vue'),
+    meta: { public: true, title: '患者注册' }
+  },
   // ---- 患者端 ----
   {
     path: '/departments',
@@ -51,7 +57,7 @@ const routes = [
     path: '/prescriptions',
     name: 'prescriptionManage',
     component: () => import('../views/PrescriptionManage.vue'),
-    meta: { title: '处方管理', roles: ['DOCTOR', 'ADMIN'] }
+    meta: { title: '处方管理', roles: ['DOCTOR', 'ADMIN', 'PATIENT'] }
   },
   {
     path: '/patients',
@@ -84,6 +90,18 @@ const routes = [
     name: 'drugList',
     component: () => import('../views/DrugList.vue'),
     meta: { title: '药品库' }
+  },
+  {
+    path: '/store',
+    name: 'drugStore',
+    component: () => import('../views/DrugStore.vue'),
+    meta: { title: '购药商城', roles: ['PATIENT'] }
+  },
+  {
+    path: '/orders',
+    name: 'purchaseOrders',
+    component: () => import('../views/PurchaseOrders.vue'),
+    meta: { title: '购药订单', roles: ['ADMIN'] }
   }
 ]
 

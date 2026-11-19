@@ -14,7 +14,7 @@ public interface PrescriptionService {
 
     Prescription create(PrescriptionRequest request);
 
-    IPage<Prescription> page(Long registrationId, Long patientId, long pageNum, long pageSize);
+    IPage<Prescription> page(Long registrationId, Long patientId, Long doctorId, long pageNum, long pageSize);
 
     Prescription detail(Long id);
 

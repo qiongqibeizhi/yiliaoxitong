@@ -2,8 +2,11 @@ package com.example.yiliaoxitong.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.yiliaoxitong.dto.LoginRequest;
+import com.example.yiliaoxitong.dto.RegisterRequest;
 import com.example.yiliaoxitong.dto.LoginResponse;
+import com.example.yiliaoxitong.entity.Patient;
 import com.example.yiliaoxitong.entity.SysUser;
+import com.example.yiliaoxitong.mapper.PatientMapper;
 import com.example.yiliaoxitong.exception.BusinessException;
 import com.example.yiliaoxitong.mapper.SysUserMapper;
 import com.example.yiliaoxitong.security.TokenPayload;
@@ -12,6 +15,7 @@ import com.example.yiliaoxitong.util.JwtUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,11 +31,70 @@ public class AuthServiceImpl implements AuthService {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final SysUserMapper userMapper;
+    private final PatientMapper patientMapper;
     private final JwtUtils jwtUtils;
 
-    public AuthServiceImpl(SysUserMapper userMapper, JwtUtils jwtUtils) {
+    public AuthServiceImpl(SysUserMapper userMapper, PatientMapper patientMapper, JwtUtils jwtUtils) {
         this.userMapper = userMapper;
+        this.patientMapper = patientMapper;
         this.jwtUtils = jwtUtils;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginResponse register(RegisterRequest request) {
+        Long exists = userMapper.selectCount(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, request.getUsername()));
+        if (exists > 0) {
+            throw new BusinessException("用户名已被占用，请换一个用户名");
+        }
+        Long idCardUsed = patientMapper.selectCount(new LambdaQueryWrapper<Patient>()
+                .eq(Patient::getIdCard, request.getIdCard()));
+        if (idCardUsed > 0) {
+            throw new BusinessException("该身份证号已建档，请直接登录");
+        }
+
+        // 建患者档案：身份证校验位/出生日期校验 + 由身份证解析补齐出生日期
+        Patient patient = new Patient();
+        patient.setPatientNo("P" + String.format("%010d", Math.abs(System.nanoTime() % 10000000000L)));
+        patient.setName(request.getName());
+        patient.setGender(request.getGender());
+        patient.setIdCard(request.getIdCard());
+        patient.setPhone(request.getPhone());
+        patient.setAddress(request.getAddress());
+        java.time.LocalDate birthday = java.time.LocalDate.parse(
+                request.getIdCard().substring(6, 14), java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        if (java.time.LocalDate.now().isBefore(birthday)) {
+            throw new BusinessException("身份证号出生日期无效，请检查号码是否正确");
+        }
+        patient.setBirthDate(birthday);
+        if (patientMapper.insert(patient) != 1) {
+            throw new BusinessException("建档失败，请稍后重试");
+        }
+
+        SysUser user = new SysUser();
+        user.setUsername(request.getUsername());
+        user.setPassword(sha256(request.getPassword()));
+        user.setRole("PATIENT");
+        user.setRealName(request.getName());
+        user.setPatientId(patient.getId());
+        user.setStatus(1);
+        if (userMapper.insert(user) != 1) {
+            throw new BusinessException("开通账号失败，请稍后重试");
+        }
+        log.info("患者注册成功：username={}, patientId={}", user.getUsername(), patient.getId());
+
+        String token = jwtUtils.createToken(user.getUsername(), user.getRole(),
+                user.getPatientId(), user.getDoctorId());
+        LoginResponse response = new LoginResponse();
+        response.setToken(token);
+        response.setExpiresIn(jwtUtils.getExpireSeconds());
+        response.setUsername(user.getUsername());
+        response.setRole(user.getRole());
+        response.setRealName(user.getRealName());
+        response.setPatientId(user.getPatientId());
+        response.setDoctorId(user.getDoctorId());
+        return response;
     }
 
     @Override

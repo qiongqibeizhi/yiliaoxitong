@@ -41,6 +41,8 @@
           <el-button link type="primary" @click="fill('patient1')">患者</el-button>
           <el-button link type="primary" @click="fill('doctor1')">医生</el-button>
           <el-button link type="primary" @click="fill('admin')">管理员</el-button>
+          <el-divider direction="vertical" />
+          <el-button link type="success" @click="$router.push('/register')">患者注册</el-button>
         </div>
       </div>
     </div>
