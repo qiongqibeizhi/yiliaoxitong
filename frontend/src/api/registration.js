@@ -11,3 +11,8 @@ export function register(data) {
 export function cancelRegistration(id) {
   return request.put(`/api/registrations/${id}/cancel`)
 }
+
+/** 完成就诊（医生/管理员） */
+export function completeRegistration(id) {
+  return http.put(`/registrations/${id}/complete`)
+}

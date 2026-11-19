@@ -37,13 +37,17 @@
           <el-tag :type="statusType(row.status)" effect="plain">{{ statusText(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="110" align="center">
+      <el-table-column label="操作" width="150" align="center">
         <template #default="{ row }">
+          <el-button
+            v-if="canComplete(row)"
+            type="success" link @click="complete(row)"
+          >完成就诊</el-button>
           <el-button
             v-if="canCancel(row)"
             type="danger" link @click="cancel(row)"
           >退号</el-button>
-          <span v-else class="muted">—</span>
+          <span v-if="!canComplete(row) && !canCancel(row)" class="muted">—</span>
         </template>
       </el-table-column>
     </el-table>
@@ -59,7 +63,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageRegistrations, cancelRegistration } from '../api/registration'
+import { pageRegistrations, cancelRegistration, completeRegistration } from '../api/registration'
 import { pageDoctors } from '../api/doctor'
 import { pageDepartments } from '../api/department'
 import { getUser } from '../utils/auth'
@@ -80,6 +84,7 @@ const STATUS_LIST = [0, 1, 2]
 const statusType = (s) => STATUS_TAG[s] ?? 'info'
 const statusText = (s) => STATUS[s] ?? s
 const canCancel = computed(() => (row) => isAdmin && row.status === 0)
+const canComplete = computed(() => (row) => (user?.role === 'DOCTOR' || isAdmin) && row.status === 0)
 
 function doctorName(id) {
   const d = doctors.value.find((item) => item.id === id)
@@ -104,6 +109,17 @@ async function load() {
 
 function search() { query.pageNum = 1; load() }
 function reset() { query.visitDate = ''; query.status = null; search() }
+
+async function complete(row) {
+  try {
+    await ElMessageBox.confirm(`确认挂号 ${row.regNo} 已完成就诊吗？`, '完成就诊', { type: 'info' })
+  } catch (e) {
+    return
+  }
+  await completeRegistration(row.id)
+  ElMessage.success('已完成就诊')
+  load()
+}
 
 async function cancel(row) {
   try {

@@ -17,4 +17,7 @@ public interface RegistrationService {
     IPage<Registration> page(RegistrationQuery query);
 
     Registration detail(Long id);
+
+    /** 医生接诊完成：待就诊 -> 已完成 */
+    void complete(Long id);
 }

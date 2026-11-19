@@ -34,6 +34,12 @@ const routes = [
     component: () => import('../views/Booking.vue'),
     meta: { title: '挂号预约' }
   },
+  {
+    path: '/my-registrations',
+    name: 'myRegistrations',
+    component: () => import('../views/MyRegistrations.vue'),
+    meta: { title: '我的挂号', roles: ['PATIENT'] }
+  },
   // ---- 医生 / 管理员端 ----
   {
     path: '/registrations',
@@ -97,8 +103,7 @@ router.beforeEach((to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-    // 角色不匹配时回到各自首页：患者去科室导航，其他去挂号记录
-    return user.role === 'PATIENT' ? '/departments' : '/registrations'
+    return homePathByRole(user.role)
   }
   return true
 })

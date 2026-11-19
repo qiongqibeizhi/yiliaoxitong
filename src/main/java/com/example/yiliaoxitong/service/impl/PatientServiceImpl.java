@@ -11,6 +11,7 @@ import com.example.yiliaoxitong.entity.Registration;
 import com.example.yiliaoxitong.exception.BusinessException;
 import com.example.yiliaoxitong.mapper.PatientMapper;
 import com.example.yiliaoxitong.mapper.RegistrationMapper;
+import com.example.yiliaoxitong.security.AuthContext;
 import com.example.yiliaoxitong.service.PatientService;
 import com.example.yiliaoxitong.util.IdCardUtils;
 import org.slf4j.Logger;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -40,11 +42,36 @@ public class PatientServiceImpl extends ServiceImpl<PatientMapper, Patient> impl
                 .and(StringUtils.hasText(query.getKeyword()), w -> w
                         .like(Patient::getName, query.getKeyword())
                         .or()
-                        .like(Patient::getPatientNo, query.getKeyword()))
+                        .like(Patient::getPatientNo, query.getKeyword())
+                        .or()
+                        .like(Patient::getIdCard, query.getKeyword()))
                 .eq(StringUtils.hasText(query.getPhone()), Patient::getPhone, query.getPhone())
+                .like(StringUtils.hasText(query.getIdCard()), Patient::getIdCard, query.getIdCard())
                 .eq(StringUtils.hasText(query.getGender()), Patient::getGender, query.getGender())
                 .orderByAsc(Patient::getId);
+        // 医生只能看到挂过自己号的患者；管理员可见全部患者
+        List<Long> ownPatientIds = ownPatientIdsOfCurrentDoctor();
+        if (ownPatientIds != null) {
+            if (ownPatientIds.isEmpty()) {
+                return page;
+            }
+            wrapper.in(Patient::getId, ownPatientIds);
+        }
         return this.page(page, wrapper);
+    }
+
+    /**
+     * 当前登录医生接诊过的患者 ID 列表；非医生角色返回 null（不做过滤）。
+     */
+    private List<Long> ownPatientIdsOfCurrentDoctor() {
+        var user = AuthContext.get();
+        if (user == null || !"DOCTOR".equals(user.role()) || user.doctorId() == null) {
+            return null;
+        }
+        return registrationMapper.selectList(Wrappers.<Registration>lambdaQuery()
+                        .eq(Registration::getDoctorId, user.doctorId())
+                        .select(Registration::getPatientId))
+                .stream().map(Registration::getPatientId).distinct().toList();
     }
 
     @Override

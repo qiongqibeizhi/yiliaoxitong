@@ -14,6 +14,7 @@
       <el-menu mode="horizontal" :ellipsis="false" class="nav" router :default-active="activeNav">
         <template v-if="isPatient">
           <el-menu-item index="/departments">科室导航</el-menu-item>
+          <el-menu-item index="/my-registrations">我的挂号</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
         <template v-else-if="isDoctor">

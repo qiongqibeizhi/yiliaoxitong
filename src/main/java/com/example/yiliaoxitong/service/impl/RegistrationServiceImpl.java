@@ -137,6 +137,21 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
         return registration;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void complete(Long id) {
+        Registration registration = detail(id);
+        if (registration.getStatus() == 1) {
+            throw new BusinessException("该挂号已完成就诊，请勿重复操作");
+        }
+        if (registration.getStatus() == 2) {
+            throw new BusinessException("该挂号已取消，无法完成就诊");
+        }
+        registration.setStatus(1);
+        updateById(registration);
+        log.info("完成就诊：regNo={}", registration.getRegNo());
+    }
+
     /** 挂号单号：R + 就诊日期 + 6 位序列，保证可读且基本唯一 */
     private String nextRegNo(DoctorSchedule schedule) {
         String date = schedule.getScheduleDate().toString().replace("-", "");

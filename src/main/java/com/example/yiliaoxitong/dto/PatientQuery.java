@@ -10,6 +10,9 @@ public class PatientQuery extends PageQuery {
 
     private String phone;
 
+    /** 管理员可按身份证号查询（完整或尾号） */
+    private String idCard;
+
     private String gender;
 
     public String getKeyword() {
@@ -26,6 +29,14 @@ public class PatientQuery extends PageQuery {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getIdCard() {
+        return idCard;
+    }
+
+    public void setIdCard(String idCard) {
+        this.idCard = idCard;
     }
 
     public String getGender() {
