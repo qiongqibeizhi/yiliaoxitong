@@ -6,7 +6,7 @@
         <div class="brand">
           <el-icon class="brand-icon"><FirstAidKit /></el-icon>
           <div>
-            <div class="brand-name">仁和医疗</div>
+            <div class="brand-name">人民医院</div>
             <div class="brand-sub">在线挂号平台</div>
           </div>
         </div>
@@ -20,8 +20,8 @@
 
     <!-- 首屏 -->
     <section class="hero">
-      <h1>专业 · 便捷 · 可信赖的在线医疗服务</h1>
-      <p>科室导航 / 医生排班 / 在线挂号 / 余额支付 / 诊断记录，一站式就医体验</p>
+      <h1>人民医院互联网服务平台</h1>
+      <p>网上预约挂号、门诊缴费、药品查询，为您提供便捷、安全的就医服务</p>
       <el-button type="primary" size="large" round @click="scrollTo('portals')">
         选择身份登录
       </el-button>
@@ -65,7 +65,7 @@
       </div>
     </section>
 
-    <footer class="portal-footer">仁和医疗 · Java Web 课程实验项目 · 数据仅用于教学演示</footer>
+    <footer class="portal-footer">人民医院 版权所有 · 互联网医院服务平台</footer>
   </div>
 </template>
 

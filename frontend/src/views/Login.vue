@@ -3,13 +3,8 @@
     <div class="login-visual">
       <div class="visual-inner">
         <el-icon class="visual-icon"><FirstAidKit /></el-icon>
-        <h1>仁和医疗</h1>
-        <p>让每一次就诊，从一次顺畅的预约开始。</p>
-        <ul>
-          <li>在线查看科室与医生排班</li>
-          <li>实名患者一键挂号，号源实时扣减</li>
-          <li>JWT 登录鉴权，隐私字段自动脱敏</li>
-        </ul>
+        <h1>人民医院</h1>
+        <p>以人为本 · 救死扶伤 · 优质服务 · 廉洁奉献</p>
       </div>
     </div>
 
@@ -175,7 +170,7 @@ async function submit() {
   border-color: #1d7fd6;
 }
 .portal-links {
-  margin-top: 16px;
+  margin-top: 22px;
   font-size: 13px;
   color: #8a97a8;
   display: flex;

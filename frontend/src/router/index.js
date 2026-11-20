@@ -123,7 +123,7 @@ const router = createRouter({
 
 // 全局前置守卫：登录校验 + 角色校验
 router.beforeEach((to) => {
-  document.title = `${to.meta.title || '医疗系统'} · 仁和医疗`
+  document.title = `${to.meta.title || '医疗系统'} · 人民医院`
   if (to.meta.public) {
     return true
   }

@@ -7,7 +7,7 @@
       <div class="brand" @click="$router.push(homePath)">
         <el-icon class="brand-icon"><FirstAidKit /></el-icon>
         <div>
-          <div class="brand-name">仁和医疗</div>
+          <div class="brand-name">人民医院</div>
           <div class="brand-sub">在线挂号平台</div>
         </div>
       </div>
@@ -48,7 +48,7 @@
       <router-view />
     </el-main>
 
-    <el-footer class="footer">仁和医疗 · Java Web 课程实验项目 · 数据仅用于教学演示</el-footer>
+    <el-footer class="footer">人民医院 · Java Web 课程实验项目 · 数据仅用于教学演示</el-footer>
   </el-container>
 </template>
 
