@@ -160,6 +160,11 @@ const rules = {
   diagnosis: [{ required: true, message: '请填写诊断', trigger: 'blur' }]
 }
 
+function formatTime(t) {
+  if (!t) return '—'
+  return String(t).replace('T', ' ').slice(0, 19)
+}
+
 function doctorName(row) {
   if (row.doctorName) return row.doctorName
   const d = doctors.value.find((item) => item.id === row.doctorId)

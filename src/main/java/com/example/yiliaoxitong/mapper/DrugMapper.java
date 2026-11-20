@@ -16,4 +16,8 @@ public interface DrugMapper extends BaseMapper<Drug> {
     @Update("UPDATE drug SET stock = stock - #{quantity} "
             + "WHERE id = #{id} AND stock >= #{quantity}")
     int deductStock(@Param("id") Long id, @Param("quantity") Integer quantity);
+
+    /** 归还库存（修改诊断记录时回退原药品占用） */
+    @Update("UPDATE drug SET stock = stock + #{quantity} WHERE id = #{id}")
+    int restoreStock(@Param("id") Long id, @Param("quantity") Integer quantity);
 }

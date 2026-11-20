@@ -74,10 +74,12 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
                 && !actor.doctorId().equals(registration.getDoctorId())) {
             throw new BusinessException("只能为本人接诊的挂号开具处方");
         }
-        long exists = count(new LambdaQueryWrapper<Prescription>()
-                .eq(Prescription::getRegistrationId, registration.getId()));
-        if (exists > 0) {
-            throw new BusinessException("该挂号已开具处方，请勿重复开方");
+        Prescription existing = getOne(new LambdaQueryWrapper<Prescription>()
+                .eq(Prescription::getRegistrationId, registration.getId())
+                .last("LIMIT 1"));
+        if (existing != null) {
+            // 复诊修改：更新诊断与药品明细，回退原药品库存后按新明细扣减
+            return updatePrescription(existing, request);
         }
 
         Prescription prescription = new Prescription();
@@ -119,6 +121,48 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
         log.info("开具处方成功：prescNo={}, registrationId={}, items={}",
                 prescription.getPrescNo(), registration.getId(), request.getItems().size());
         return prescription;
+    }
+
+    /** 复诊：更新已有诊断记录。已支付单不允许修改药品，仅允许修改诊断内容 */
+    private Prescription updatePrescription(Prescription existing, PrescriptionRequest request) {
+        if (existing.getStatus() != null && existing.getStatus() == 0) {
+            // 待支付：整体替换明细，回退原库存
+            for (PrescriptionItem item : itemMapper.selectList(new LambdaQueryWrapper<PrescriptionItem>()
+                    .eq(PrescriptionItem::getPrescriptionId, existing.getId()))) {
+                drugMapper.restoreStock(item.getDrugId(), item.getQuantity());
+                itemMapper.deleteById(item.getId());
+            }
+            for (PrescriptionItemRequest itemRequest : request.getItems()) {
+                Drug drug = drugMapper.selectById(itemRequest.getDrugId());
+                if (drug == null) {
+                    throw new BusinessException("药品不存在，无法开具");
+                }
+                if (drug.getStatus() == null || drug.getStatus() != 1) {
+                    throw new BusinessException("药品 " + drug.getDrugName() + " 已停用");
+                }
+                int deducted = drugMapper.deductStock(drug.getId(), itemRequest.getQuantity());
+                if (deducted == 0) {
+                    throw new StockNotEnoughException("药品 " + drug.getDrugName() + " 库存不足，当前仅剩 "
+                            + drug.getStock() + " " + drug.getUnit() + "，请调整数量或更换药品");
+                }
+                PrescriptionItem item = new PrescriptionItem();
+                item.setPrescriptionId(existing.getId());
+                item.setDrugId(drug.getId());
+                item.setDrugName(drug.getDrugName());
+                item.setSpec(drug.getSpec());
+                item.setQuantity(itemRequest.getQuantity());
+                item.setUnit(drug.getUnit());
+                item.setDosage(itemRequest.getDosage());
+                item.setPrice(drug.getPrice());
+                itemMapper.insert(item);
+            }
+            existing.setStatus(request.getItems() == null || request.getItems().isEmpty() ? 1 : 0);
+        }
+        existing.setDiagnosis(request.getDiagnosis());
+        existing.setPrescTime(LocalDateTime.now());
+        updateById(existing);
+        log.info("复诊更新诊断记录：prescNo={}", existing.getPrescNo());
+        return existing;
     }
 
     @Override
