@@ -46,6 +46,18 @@ public class Prescription {
     @TableField(exist = false)
     private String doctorName;
 
+    /** 是否需要支付（含药品明细时为 true，联查字段） */
+    @TableField(exist = false)
+    private Boolean needPay;
+
+    public Boolean getNeedPay() {
+        return needPay;
+    }
+
+    public void setNeedPay(Boolean needPay) {
+        this.needPay = needPay;
+    }
+
     public String getDoctorName() {
         return doctorName;
     }

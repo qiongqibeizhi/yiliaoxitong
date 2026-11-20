@@ -28,7 +28,7 @@
       <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
           <el-tag :type="row.status === 0 ? 'warning' : 'success'" effect="plain">
-            {{ row.status === 0 ? '待支付' : '已支付' }}
+            {{ row.status === 0 ? '待支付' : (row.needPay ? '已支付' : '无需支付') }}
           </el-tag>
         </template>
       </el-table-column>

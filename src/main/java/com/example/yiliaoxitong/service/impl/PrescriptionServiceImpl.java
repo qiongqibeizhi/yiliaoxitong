@@ -149,8 +149,14 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
         }
         java.util.Map<Long, String> nameMap = doctorMapper.selectBatchIds(ids).stream()
                 .collect(java.util.stream.Collectors.toMap(Doctor::getId, Doctor::getName));
+        // 批量标记是否含药品明细：纯诊断记录无需支付
+        java.util.Set<Long> withItems = itemMapper.selectList(new LambdaQueryWrapper<PrescriptionItem>()
+                        .in(PrescriptionItem::getPrescriptionId, ids))
+                .stream().map(PrescriptionItem::getPrescriptionId)
+                .collect(java.util.stream.Collectors.toSet());
         for (Prescription p : records) {
             p.setDoctorName(nameMap.get(p.getDoctorId()));
+            p.setNeedPay(withItems.contains(p.getId()));
         }
     }
 
