@@ -32,6 +32,7 @@
           <el-menu-item index="/manage/schedules">排班管理</el-menu-item>
           <el-menu-item index="/manage/doctors">医生管理</el-menu-item>
           <el-menu-item index="/manage/departments">科室管理</el-menu-item>
+          <el-menu-item index="/manage/accounts">账号管理</el-menu-item>
           <el-menu-item index="/orders">购药订单</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>

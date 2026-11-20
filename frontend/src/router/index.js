@@ -72,6 +72,12 @@ const routes = [
   },
   // ---- 管理员端 ----
   {
+    path: '/manage/accounts',
+    name: 'accountManage',
+    component: () => import('../views/AccountManage.vue'),
+    meta: { title: '账号管理', roles: ['ADMIN'] }
+  },
+  {
     path: '/manage/departments',
     name: 'departmentManage',
     component: () => import('../views/DepartmentManage.vue'),
