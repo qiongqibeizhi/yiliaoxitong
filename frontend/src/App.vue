@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isLogin">
+  <div v-if="isAuthPage">
     <router-view />
   </div>
   <el-container v-else class="layout">
@@ -18,7 +18,6 @@
           <el-menu-item index="/prescriptions">我的处方</el-menu-item>
           <el-menu-item index="/store">购药商城</el-menu-item>
           <el-menu-item index="/wallet">我的钱包</el-menu-item>
-          <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
         <template v-else-if="isDoctor">
           <el-menu-item index="/registrations">挂号记录</el-menu-item>
@@ -39,7 +38,7 @@
       </el-menu>
       <div class="user-area">
         <el-tag v-if="user" type="success" effect="plain" round>{{ roleText }}</el-tag>
-        <span v-if="isPatient" class="wallet-chip">余额 ¥ {{ walletText }}</span>
+        <span v-if="user && isPatient" class="wallet-chip">余额 ¥ {{ walletText }}</span>
         <span v-if="user" class="username">{{ user.realName || user.username }}</span>
         <el-button v-if="user" link type="primary" @click="handleLogout">退出登录</el-button>
       </div>
@@ -65,6 +64,8 @@ import { getBalance } from './api/wallet'
 const route = useRoute()
 const router = useRouter()
 
+// 登录/注册页不显示导航栏（未登录不暴露内部菜单与余额）
+const isAuthPage = computed(() => ['/login', '/register'].includes(route.path))
 const isLogin = computed(() => route.path === '/login')
 // getUser 读的是 localStorage（非响应式），这里显式依赖路由，
 // 登录/登出引起导航变化时才會重新读取会话，保证菜单与角色标签即时刷新

@@ -1,7 +1,7 @@
 <template>
   <div class="page-card">
-    <h2 class="page-title">处方管理</h2>
-    <p class="page-desc">医生与管理员可查询处方明细、按挂号记录开具新处方。</p>
+    <h2 class="page-title">{{ pageTitle }}</h2>
+    <p class="page-desc">{{ pageDesc }}</p>
 
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="挂号编号">
@@ -127,6 +127,10 @@ import { getUser } from '../utils/auth'
 
 const user = getUser()
 const isPatient = user?.role === 'PATIENT'
+const pageTitle = isPatient ? '我的处方' : '处方管理'
+const pageDesc = isPatient
+  ? '医生开单后可在此查看本人处方并支付药费。'
+  : '医生与管理员可查询处方明细、按挂号记录开具新处方。'
 const loading = ref(false)
 const rows = ref([])
 const total = ref(0)
@@ -228,7 +232,8 @@ async function save() {
 
 onMounted(async () => {
   if (user?.role === 'PATIENT') {
-    ElMessage.warning('处方管理仅对医生与管理员开放')
+    // 患者视角：仅查看本人处方并支付药费
+    await load()
     return
   }
   const [d, dr] = await Promise.all([
