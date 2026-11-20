@@ -1,7 +1,7 @@
 <template>
   <div class="page-card">
     <h2 class="page-title">患者档案管理</h2>
-    <p class="page-desc">医生可查看患者档案（隐私字段脱敏），管理员可新增、编辑、删除。</p>
+    <p class="page-desc">医生可查看患者基本信息，管理员可新增、编辑、删除患者档案；患者隐私信息严格保密。</p>
 
     <el-form :inline="true" :model="query" class="filter-bar">
       <el-form-item label="关键词">

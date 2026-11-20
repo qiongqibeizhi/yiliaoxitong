@@ -39,10 +39,10 @@
         <el-card shadow="never" class="info-card confirm-card">
           <template #header><span class="card-title">预约须知</span></template>
           <ul class="tips">
-            <li>同一患者当天重复挂同一医生的号会被后端拦截并提示。</li>
+            <li>同一患者同一天重复挂同一医生的号，系统会予以提示。</li>
             <li>号源已满时提示“号源不足”，不会产生挂号记录。</li>
-            <li>挂号与号源扣减在同一事务内完成，失败整体回滚。</li>
-            <li>患者身份证与手机号在接口返回时自动脱敏。</li>
+            <li>提交后号源立即锁定；如预约失败，号源不受影响。</li>
+            <li>您的个人信息将严格保密，仅在就诊时使用。</li>
           </ul>
           <el-button
             type="primary"

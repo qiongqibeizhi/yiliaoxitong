@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.yiliaoxitong.dto.PrescriptionItemRequest;
 import com.example.yiliaoxitong.dto.PrescriptionRequest;
 import com.example.yiliaoxitong.entity.Drug;
+import com.example.yiliaoxitong.entity.Doctor;
 import com.example.yiliaoxitong.entity.Prescription;
 import com.example.yiliaoxitong.entity.PrescriptionItem;
 import com.example.yiliaoxitong.entity.Registration;
@@ -14,6 +15,7 @@ import com.example.yiliaoxitong.exception.BusinessException;
 import com.example.yiliaoxitong.exception.StockNotEnoughException;
 import com.example.yiliaoxitong.security.AuthContext;
 import com.example.yiliaoxitong.mapper.DrugMapper;
+import com.example.yiliaoxitong.mapper.DoctorMapper;
 import com.example.yiliaoxitong.mapper.PrescriptionItemMapper;
 import com.example.yiliaoxitong.mapper.PrescriptionMapper;
 import com.example.yiliaoxitong.mapper.RegistrationMapper;
@@ -43,14 +45,16 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
     private final RegistrationMapper registrationMapper;
     private final PrescriptionItemMapper itemMapper;
     private final DrugMapper drugMapper;
+    private final DoctorMapper doctorMapper;
     private final WalletService walletService;
 
     public PrescriptionServiceImpl(RegistrationMapper registrationMapper,
                                    PrescriptionItemMapper itemMapper, DrugMapper drugMapper,
-                                   WalletService walletService) {
+                                   DoctorMapper doctorMapper, WalletService walletService) {
         this.registrationMapper = registrationMapper;
         this.itemMapper = itemMapper;
         this.drugMapper = drugMapper;
+        this.doctorMapper = doctorMapper;
         this.walletService = walletService;
     }
 
@@ -124,7 +128,30 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
                 .eq(patientId != null, Prescription::getPatientId, patientId)
                 .eq(doctorId != null, Prescription::getDoctorId, doctorId)
                 .orderByDesc(Prescription::getPrescTime);
-        return page(new Page<>(pageNum, pageSize), wrapper);
+        IPage<Prescription> result = page(new Page<>(pageNum, pageSize), wrapper);
+        fillDoctorNames(result.getRecords());
+        return result;
+    }
+
+    /** 批量回填医生姓名，避免前端仅展示数字 ID */
+    private void fillDoctorNames(List<Prescription> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Prescription p : records) {
+            if (p.getDoctorId() != null) {
+                ids.add(p.getDoctorId());
+            }
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        java.util.Map<Long, String> nameMap = doctorMapper.selectBatchIds(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Doctor::getId, Doctor::getName));
+        for (Prescription p : records) {
+            p.setDoctorName(nameMap.get(p.getDoctorId()));
+        }
     }
 
     @Override

@@ -42,6 +42,18 @@ public class Prescription {
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 出诊医生姓名（联查字段，不入库） */
+    @TableField(exist = false)
+    private String doctorName;
+
+    public String getDoctorName() {
+        return doctorName;
+    }
+
+    public void setDoctorName(String doctorName) {
+        this.doctorName = doctorName;
+    }
+
     public Long getId() {
         return id;
     }

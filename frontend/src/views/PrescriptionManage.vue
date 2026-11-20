@@ -19,10 +19,12 @@
       <el-table-column prop="registrationId" label="挂号记录 ID" width="110" align="center" />
       <el-table-column prop="patientId" label="患者编号" width="100" align="center" />
       <el-table-column label="医生" width="110" align="center">
-        <template #default="{ row }">{{ doctorName(row.doctorId) }}</template>
+        <template #default="{ row }">{{ doctorName(row) }}</template>
       </el-table-column>
       <el-table-column prop="diagnosis" label="诊断" min-width="160" show-overflow-tooltip />
-      <el-table-column prop="prescTime" label="开方时间" width="170" align="center" />
+      <el-table-column label="开方时间" width="170" align="center">
+        <template #default="{ row }">{{ formatTime(row.prescTime) }}</template>
+      </el-table-column>
       <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
           <el-tag :type="row.status === 0 ? 'warning' : 'success'" effect="plain">
@@ -48,7 +50,7 @@
     <el-dialog v-model="detailVisible" title="处方明细" width="640px">
       <el-descriptions :column="2" border size="small" class="detail-desc">
         <el-descriptions-item label="处方编号">{{ detail.prescNo }}</el-descriptions-item>
-        <el-descriptions-item label="开方时间">{{ detail.prescTime }}</el-descriptions-item>
+        <el-descriptions-item label="开方时间">{{ formatTime(detail.prescTime) }}</el-descriptions-item>
         <el-descriptions-item label="诊断" :span="2">{{ detail.diagnosis }}</el-descriptions-item>
       </el-descriptions>
       <el-table :data="items" size="small" border class="detail-table">
@@ -158,9 +160,10 @@ const rules = {
   diagnosis: [{ required: true, message: '请填写诊断', trigger: 'blur' }]
 }
 
-function doctorName(id) {
-  const d = doctors.value.find((item) => item.id === id)
-  return d ? d.name : id
+function doctorName(row) {
+  if (row.doctorName) return row.doctorName
+  const d = doctors.value.find((item) => item.id === row.doctorId)
+  return d ? d.name : row.doctorId
 }
 
 async function load() {
@@ -243,7 +246,9 @@ async function save() {
 
 onMounted(async () => {
   if (user?.role === 'PATIENT') {
-    // 患者视角：仅查看本人处方并支付药费
+    // 患者视角：仅查看本人诊断记录并支付药费
+    const d = await pageDoctors({ pageNum: 1, pageSize: 100 })
+    doctors.value = d.records || []
     await load()
     return
   }
