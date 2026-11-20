@@ -31,6 +31,17 @@ public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
     private static final String BEARER_PREFIX = "Bearer ";
 
+    /** GB 11643 校验位算法：加权因子 + 模 11 映射 */
+    private static boolean validIdCard(String idCard) {
+        int[] weights = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
+        String codes = "10X98765432";
+        int sum = 0;
+        for (int i = 0; i < 17; i++) {
+            sum += (idCard.charAt(i) - '0') * weights[i];
+        }
+        return codes.charAt(sum % 11) == Character.toUpperCase(idCard.charAt(17));
+    }
+
     private final SysUserMapper userMapper;
     private final PatientMapper patientMapper;
     private final PatientWalletMapper walletMapper;
@@ -75,6 +86,9 @@ public class AuthServiceImpl implements AuthService {
         }
         if (java.time.LocalDate.now().isBefore(birthday)) {
             throw new BusinessException("身份证号出生日期无效，请检查号码是否正确");
+        }
+        if (!validIdCard(request.getIdCard())) {
+            throw new BusinessException("身份证号校验位不正确，请核对号码是否输错");
         }
         patient.setBirthDate(birthday);
         if (patientMapper.insert(patient) != 1) {

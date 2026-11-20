@@ -55,6 +55,40 @@ const form = reactive({
   gender: '男', idCard: '', phone: '', address: ''
 })
 
+// 身份证号逐级校验：格式 → 出生日期 → 校验位，明确提示具体哪里不对
+function validateIdCard(rule, value, callback) {
+  if (!/^\d{17}[0-9Xx]$/.test(value)) {
+    callback(new Error('身份证号应为 18 位（前 17 位数字 + 末位数字或 X）'))
+    return
+  }
+  const y = Number(value.slice(6, 10))
+  const m = Number(value.slice(10, 12))
+  const d = Number(value.slice(12, 14))
+  const now = new Date()
+  if (y < 1900 || y > now.getFullYear()) {
+    callback(new Error(`出生年份 ${y} 无效（应为 1900-${now.getFullYear()}）`))
+    return
+  }
+  const birth = new Date(y, m - 1, d)
+  if (birth.getFullYear() !== y || birth.getMonth() !== m - 1 || birth.getDate() !== d) {
+    callback(new Error(`出生日期 ${y}-${m}-${d} 不存在，请检查号码`))
+    return
+  }
+  if (birth > now) {
+    callback(new Error('出生日期不能晚于今天，请检查号码'))
+    return
+  }
+  const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
+  const codes = '10X98765432'
+  let sum = 0
+  for (let i = 0; i < 17; i++) sum += Number(value[i]) * weights[i]
+  if (codes[sum % 11] !== value[17].toUpperCase()) {
+    callback(new Error('身份证号校验位不正确，请核对是否输错'))
+    return
+  }
+  callback()
+}
+
 const rules = {
   username: [{ required: true, message: '请填写用户名', trigger: 'blur' },
     { min: 3, max: 40, message: '用户名长度应为 3-40 位', trigger: 'blur' }],
@@ -71,14 +105,23 @@ const rules = {
   name: [{ required: true, message: '请填写姓名', trigger: 'blur' }],
   gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
   idCard: [{ required: true, message: '请填写身份证号', trigger: 'blur' },
-    { pattern: /^\d{17}[0-9Xx]$/, message: '身份证号格式不正确', trigger: 'blur' }],
+    { validator: validateIdCard, trigger: 'blur' }],
   phone: [{ required: true, message: '请填写手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }]
 }
 
 async function submit() {
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  await formRef.value.validate(async (valid, invalidFields) => {
+    if (!valid) {
+      // 点击注册时校验不通过：弹窗提示第一个错误字段，并滚动到该字段
+      const firstField = Object.keys(invalidFields || {})[0]
+      if (firstField) {
+        const firstError = invalidFields[firstField][0]?.message || '请检查填写内容'
+        ElMessage.warning(firstError)
+        formRef.value.scrollToField(firstField)
+      }
+      return
+    }
     loading.value = true
     try {
       const data = await register(form)
