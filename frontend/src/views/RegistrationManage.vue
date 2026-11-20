@@ -34,7 +34,9 @@
       <el-table-column prop="regFee" label="挂号费（元）" width="110" align="center" />
       <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
-          <el-tag :type="statusType(row.status)" effect="plain">{{ statusText(row.status) }}</el-tag>
+          <el-tag :type="statusType(row.status)" effect="plain">
+            {{ statusText(row.status) }}{{ row.status === 0 && diagnosedIds.has(row.id) ? '·已诊断' : '' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="170" align="center">
@@ -42,7 +44,7 @@
           <el-button
             v-if="isDoctor && row.status === 0"
             type="primary" link @click="openVisit(row)"
-          >就诊</el-button>
+          >{{ diagnosedIds.has(row.id) ? '完成就诊' : '就诊' }}</el-button>
           <el-button
             v-if="isAdmin && row.status === 0"
             type="success" link @click="complete(row)"
@@ -120,6 +122,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageRegistrations, cancelRegistration, completeRegistration } from '../api/registration'
+import { pagePrescriptions } from '../api/prescription'
 import { pageDoctors } from '../api/doctor'
 import { pageDrugs } from '../api/drug'
 import { createPrescription } from '../api/prescription'
@@ -161,12 +164,17 @@ function deptName(id) {
   return d ? d.deptName : id
 }
 
+const diagnosedIds = ref(new Set())
+
 async function load() {
   loading.value = true
   try {
     const page = await pageRegistrations(query)
     rows.value = page.records || []
     total.value = page.total || 0
+    // 标记已开诊断记录但尚未完成就诊的挂号
+    const presc = await pagePrescriptions({ pageNum: 1, pageSize: 100 })
+    diagnosedIds.value = new Set((presc.records || []).map((r) => r.registrationId))
   } finally {
     loading.value = false
   }
