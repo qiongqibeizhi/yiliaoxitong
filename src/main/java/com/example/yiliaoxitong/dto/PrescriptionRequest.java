@@ -2,7 +2,6 @@ package com.example.yiliaoxitong.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -19,7 +18,7 @@ public class PrescriptionRequest {
     private String diagnosis;
 
     @Valid
-    @NotEmpty(message = "处方至少包含一种药品")
+    /** 诊断记录允许不开药：明细可为空 */
     private List<PrescriptionItemRequest> items;
 
     public Long getRegistrationId() {

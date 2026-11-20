@@ -39,12 +39,15 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
     private final PatientMapper patientMapper;
     private final DoctorMapper doctorMapper;
     private final DoctorScheduleMapper scheduleMapper;
+    private final com.example.yiliaoxitong.mapper.PrescriptionMapper prescriptionMapper;
 
     public RegistrationServiceImpl(PatientMapper patientMapper, DoctorMapper doctorMapper,
-                                   DoctorScheduleMapper scheduleMapper) {
+                                   DoctorScheduleMapper scheduleMapper,
+                                   com.example.yiliaoxitong.mapper.PrescriptionMapper prescriptionMapper) {
         this.patientMapper = patientMapper;
         this.doctorMapper = doctorMapper;
         this.scheduleMapper = scheduleMapper;
+        this.prescriptionMapper = prescriptionMapper;
     }
 
     @Override
@@ -158,6 +161,16 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
         }
         if (registration.getStatus() == 2) {
             throw new BusinessException("该挂号已取消，无法完成就诊");
+        }
+        // 医生必须先开具诊断记录才能完成就诊；管理员可直接完成
+        var actor = com.example.yiliaoxitong.security.AuthContext.get();
+        if (actor != null && "DOCTOR".equals(actor.role())) {
+            Long prescCount = prescriptionMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.example.yiliaoxitong.entity.Prescription>()
+                            .eq(com.example.yiliaoxitong.entity.Prescription::getRegistrationId, id));
+            if (prescCount == 0) {
+                throw new BusinessException("请先开具诊断记录，再完成就诊");
+            }
         }
         registration.setStatus(1);
         updateById(registration);

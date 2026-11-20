@@ -15,8 +15,8 @@
 
     <div class="login-panel">
       <div class="panel-inner">
-        <h2>账号登录</h2>
-        <p class="hint">请使用患者 / 医生 / 管理员账号登录</p>
+        <h2>{{ portal.title }}</h2>
+        <p class="hint">{{ portal.hint }}</p>
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" @keyup.enter="submit">
           <el-form-item label="用户名" prop="username">
             <el-input v-model="form.username" placeholder="请输入用户名" prefix-icon="User" size="large" clearable />
@@ -36,12 +36,14 @@
           </el-button>
         </el-form>
 
-        <div class="demo-box">
-          <span>演示账号</span>
-          <el-button link type="primary" @click="fill('patient1')">患者</el-button>
-          <el-button link type="primary" @click="fill('doctor1')">医生</el-button>
-          <el-button link type="primary" @click="fill('admin')">管理员</el-button>
-          <el-divider direction="vertical" />
+        <div class="portal-links">
+          <span>其他入口：</span>
+          <el-button v-if="portalRole !== 'PATIENT'" link type="primary" @click="$router.push('/login/patient')">患者入口</el-button>
+          <el-button v-if="portalRole !== 'DOCTOR'" link type="primary" @click="$router.push('/login/doctor')">医生工作站</el-button>
+          <el-button v-if="portalRole !== 'ADMIN'" link type="primary" @click="$router.push('/login/admin')">管理后台</el-button>
+        </div>
+        <div v-if="portalRole === 'PATIENT'" class="portal-links">
+          <span>还没有账号？</span>
           <el-button link type="success" @click="$router.push('/register')">患者注册</el-button>
         </div>
       </div>
@@ -50,12 +52,18 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { login } from '../api/auth'
 import { saveSession } from '../utils/auth'
 import { homePathByRole } from '../router'
+
+const PORTALS = {
+  PATIENT: { title: '患者入口', hint: '挂号、购药、支付药费，请从患者入口登录' },
+  DOCTOR: { title: '医生工作站', hint: '接诊、开具诊断记录，请使用医生账号登录' },
+  ADMIN: { title: '管理后台', hint: '全院数据管理与运营，请使用管理员账号登录' }
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -63,14 +71,16 @@ const formRef = ref()
 const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
+// 由登录路由决定入口身份：/login/patient /login/doctor /login/admin
+const portalRole = computed(() => {
+  const m = String(route.path).match(/^\/login\/(patient|doctor|admin)$/)
+  return m ? m[1].toUpperCase() : 'PATIENT'
+})
+const portal = computed(() => PORTALS[portalRole.value])
+
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
-
-function fill(username) {
-  form.username = username
-  form.password = '123456'
 }
 
 async function submit() {
@@ -79,6 +89,11 @@ async function submit() {
     loading.value = true
     try {
       const data = await login({ username: form.username, password: form.password })
+      if (data.role !== portalRole.value) {
+        const target = PORTALS[data.role]
+        ElMessage.warning(`当前入口为${portal.value.title}，该账号属于「${target ? target.title : data.role}」，请从对应入口登录`)
+        return
+      }
       saveSession(data)
       ElMessage.success(`欢迎回来，${data.realName || data.username}`)
       router.push(route.query.redirect || homePathByRole(data.role))
@@ -159,8 +174,8 @@ async function submit() {
   background: #1d7fd6;
   border-color: #1d7fd6;
 }
-.demo-box {
-  margin-top: 22px;
+.portal-links {
+  margin-top: 16px;
   font-size: 13px;
   color: #8a97a8;
   display: flex;

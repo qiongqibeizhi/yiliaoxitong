@@ -83,8 +83,8 @@ public class PrescriptionServiceImpl extends ServiceImpl<PrescriptionMapper, Pre
         prescription.setDoctorId(registration.getDoctorId());
         prescription.setDiagnosis(request.getDiagnosis());
         prescription.setPrescTime(LocalDateTime.now());
-        // 开单后订单进入待支付状态，由患者凭余额支付
-        prescription.setStatus(0);
+        // 未开药的纯诊断记录无需支付；开单后进入待支付，由患者凭余额支付
+        prescription.setStatus(request.getItems() == null || request.getItems().isEmpty() ? 1 : 0);
         save(prescription);
 
         for (PrescriptionItemRequest itemRequest : request.getItems()) {

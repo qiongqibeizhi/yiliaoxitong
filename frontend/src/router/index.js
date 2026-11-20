@@ -2,9 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUser } from '../utils/auth'
 
 const routes = [
-  { path: '/', redirect: '/departments' },
   {
-    path: '/login',
+    path: '/',
+    name: 'portal',
+    component: () => import('../views/Portal.vue'),
+    meta: { public: true, title: '首页' }
+  },
+  {
+    path: '/login/:role(patient|doctor|admin)?',
     name: 'login',
     component: () => import('../views/Login.vue'),
     meta: { public: true, title: '登录' }

@@ -10,7 +10,7 @@
       <el-form-item>
         <el-button type="primary" icon="Search" @click="search">查询</el-button>
         <el-button icon="Refresh" @click="reset">重置</el-button>
-        <el-button v-if="!isPatient" type="success" icon="Plus" @click="openCreate">开具新处方</el-button>
+        <el-button v-if="!isPatient" type="success" icon="Plus" @click="openCreate">开具诊断记录</el-button>
       </el-form-item>
     </el-form>
 
@@ -62,10 +62,16 @@
     </el-dialog>
 
     <!-- 开方弹窗 -->
-    <el-dialog v-model="createVisible" title="开具新处方" width="680px" destroy-on-close>
+    <el-dialog v-model="createVisible" title="开具诊断记录" width="680px" destroy-on-close>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-        <el-form-item label="挂号记录 ID" prop="registrationId">
-          <el-input-number v-model="form.registrationId" :min="1" style="width: 220px" />
+        <el-form-item label="待就诊挂号" prop="registrationId">
+          <el-select v-model="form.registrationId" filterable placeholder="选择本人名下待就诊的挂号" style="width: 100%">
+            <el-option
+              v-for="r in pendingRegs" :key="r.id"
+              :label="`${r.regNo} · 患者#${r.patientId} · ${r.visitDate} ${r.timeSlot}`"
+              :value="r.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="诊断" prop="diagnosis">
           <el-input v-model="form.diagnosis" placeholder="如：急性上呼吸道感染" />
@@ -73,7 +79,7 @@
       </el-form>
 
       <div class="items-head">
-        <span class="card-title">处方药品</span>
+        <span class="card-title">开具药品（可选，非处方药可不填）</span>
         <el-button type="primary" size="small" icon="Plus" @click="addItem">添加药品</el-button>
       </div>
       <el-table :data="form.items" size="small" border>
@@ -118,6 +124,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pagePrescriptions, getPrescription, getPrescriptionItems, createPrescription } from '../api/prescription'
 import { pageDoctors } from '../api/doctor'
+import { pageRegistrations } from '../api/registration'
 import { pageDrugs } from '../api/drug'
 import { payPrescription, getPrescriptionAmount } from '../api/prescription'
 import { getBalance } from '../api/wallet'
@@ -127,10 +134,11 @@ import { getUser } from '../utils/auth'
 
 const user = getUser()
 const isPatient = user?.role === 'PATIENT'
-const pageTitle = isPatient ? '我的处方' : '处方管理'
+const pendingRegs = ref([])
+const pageTitle = isPatient ? '我的诊断记录' : '诊断记录'
 const pageDesc = isPatient
-  ? '医生开单后可在此查看本人处方并支付药费。'
-  : '医生与管理员可查询处方明细、按挂号记录开具新处方。'
+  ? '医生开单后可在此查看本人诊断记录并支付药费。'
+  : '医生与管理员可查询诊断记录、按待就诊挂号开具诊断记录（开药可选）。'
 const loading = ref(false)
 const rows = ref([])
 const total = ref(0)
@@ -195,11 +203,14 @@ async function showDetail(row) {
   detailVisible.value = true
 }
 
-function openCreate() {
+async function openCreate() {
   form.registrationId = null
   form.diagnosis = ''
   form.items = [{ drugId: null, quantity: 1, dosage: '' }]
   createVisible.value = true
+  // 拉取本人名下待就诊的挂号，供开诊断记录选择
+  const page = await pageRegistrations({ pageNum: 1, pageSize: 100, status: 0 })
+  pendingRegs.value = page.records || []
 }
 
 function addItem() {

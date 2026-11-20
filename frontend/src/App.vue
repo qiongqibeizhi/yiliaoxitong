@@ -15,19 +15,19 @@
         <template v-if="isPatient">
           <el-menu-item index="/departments">科室导航</el-menu-item>
           <el-menu-item index="/my-registrations">我的挂号</el-menu-item>
-          <el-menu-item index="/prescriptions">我的处方</el-menu-item>
+          <el-menu-item index="/prescriptions">我的诊断记录</el-menu-item>
           <el-menu-item index="/store">购药商城</el-menu-item>
           <el-menu-item index="/wallet">我的钱包</el-menu-item>
         </template>
         <template v-else-if="isDoctor">
           <el-menu-item index="/registrations">挂号记录</el-menu-item>
-          <el-menu-item index="/prescriptions">处方管理</el-menu-item>
+          <el-menu-item index="/prescriptions">诊断记录</el-menu-item>
           <el-menu-item index="/patients">患者档案</el-menu-item>
           <el-menu-item index="/drugs">药品库</el-menu-item>
         </template>
         <template v-else>
           <el-menu-item index="/registrations">挂号记录</el-menu-item>
-          <el-menu-item index="/prescriptions">处方管理</el-menu-item>
+          <el-menu-item index="/prescriptions">诊断记录</el-menu-item>
           <el-menu-item index="/patients">患者档案</el-menu-item>
           <el-menu-item index="/manage/schedules">排班管理</el-menu-item>
           <el-menu-item index="/manage/doctors">医生管理</el-menu-item>
@@ -65,7 +65,7 @@ const route = useRoute()
 const router = useRouter()
 
 // 登录/注册页不显示导航栏（未登录不暴露内部菜单与余额）
-const isAuthPage = computed(() => ['/login', '/register'].includes(route.path))
+const isAuthPage = computed(() => route.path.startsWith('/login') || route.path === '/register')
 const isLogin = computed(() => route.path === '/login')
 // getUser 读的是 localStorage（非响应式），这里显式依赖路由，
 // 登录/登出引起导航变化时才會重新读取会话，保证菜单与角色标签即时刷新
