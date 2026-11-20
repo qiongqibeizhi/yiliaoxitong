@@ -15,7 +15,7 @@ public class RechargeRequest {
 
     @NotNull(message = "请填写充值金额")
     @DecimalMin(value = "0.01", message = "充值金额至少 0.01 元")
-    @DecimalMax(value = "5000", message = "单笔充值不能超过 5000 元")
+    @DecimalMax(value = "50000", message = "单笔充值不能超过 50000 元")
     private BigDecimal amount;
 
     @NotBlank(message = "请输入付款密码")

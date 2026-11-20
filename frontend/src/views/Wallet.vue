@@ -9,12 +9,12 @@
       <el-button type="primary" size="large" @click="openRecharge">充值</el-button>
     </div>
 
-    <el-dialog v-model="visible" title="沙箱收银台 · 余额充值" width="420px" destroy-on-close>
+    <el-dialog v-model="visible" title="收银台 · 余额充值" width="420px" destroy-on-close>
       <el-alert type="info" :closable="false" class="tip"
         title="沙箱环境不产生真实扣款，统一付款密码为 123456" />
       <el-form label-width="90px">
         <el-form-item label="充值金额">
-          <el-input-number v-model="amount" :min="0.01" :max="5000" :precision="2" :step="100" style="width: 200px" />
+          <el-input-number v-model="amount" :min="0.01" :max="50000" :precision="2" :step="100" style="width: 200px" />
         </el-form-item>
         <el-form-item label="付款密码">
           <el-input
