@@ -2,7 +2,7 @@
   <div>
     <div class="page-card">
       <h2 class="page-title">科室导航</h2>
-      <p class="page-desc">选择科室查看出诊医生，支持按名称与状态筛选。</p>
+      <p class="page-desc">{{ visitor ? '查看全院科室分布与楼层位置，登录后可在线预约挂号。' : '选择科室查看出诊医生，支持按名称与状态筛选。' }}</p>
 
       <el-form :inline="true" :model="query" class="filter-bar">
         <el-form-item label="科室名称">
@@ -56,6 +56,10 @@
 </template>
 
 <script setup>
+import { getUser } from '../utils/auth'
+
+// 访客模式：未登录也可浏览科室导览
+const visitor = !getUser()
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageDepartments } from '../api/department'

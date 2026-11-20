@@ -25,19 +25,19 @@ const routes = [
     path: '/departments',
     name: 'departments',
     component: () => import('../views/DepartmentList.vue'),
-    meta: { title: '科室导航' }
+    meta: { public: true, title: '科室导航' }
   },
   {
     path: '/departments/:departmentId/doctors',
     name: 'doctors',
     component: () => import('../views/DoctorList.vue'),
-    meta: { title: '医生列表' }
+    meta: { public: true, title: '医生列表' }
   },
   {
     path: '/doctors/:id',
     name: 'doctorDetail',
     component: () => import('../views/DoctorDetail.vue'),
-    meta: { title: '医生详情' }
+    meta: { public: true, title: '医生详情' }
   },
   {
     path: '/booking',

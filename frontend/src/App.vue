@@ -4,11 +4,11 @@
   </div>
   <el-container v-else class="layout">
     <el-header class="topbar">
-      <div class="brand" @click="$router.push(homePath)">
+      <div class="brand" @click="$router.push(isAuthPage || !user ? '/' : homePath)">
         <el-icon class="brand-icon"><FirstAidKit /></el-icon>
         <div>
           <div class="brand-name">人民医院</div>
-          <div class="brand-sub">在线挂号平台</div>
+          <div class="brand-sub">互联网医疗服务平台</div>
         </div>
       </div>
       <el-menu mode="horizontal" :ellipsis="false" class="nav" router :default-active="activeNav">
